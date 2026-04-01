@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>TKM9 | Service & Support Desk</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--blue:#1a1aff;--bl:#eeeeff;--bm:#a0a0ff;--bg:#f2f3f7;--sur:#fff;--su2:#f0f1f6;--bor:#dde0ec;--txt:#12122a;--mut:#6b6f8a;--grn:#00a550;--gl:#e6f7ef;--amb:#d97000;--al:#fff3e0;--red:#cc2233;--rl:#ffebee;--rad:14px;--rsm:9px;--shd:0 1px 6px rgba(18,18,50,.07);--sdm:0 3px 14px rgba(18,18,50,.1)}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--txt);font-family:'DM Sans',sans-serif;font-size:15px;line-height:1.5;min-height:100vh}
+.hdr{background:#000;padding:0 16px;height:64px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;box-shadow:0 2px 10px rgba(0,0,0,.4)}
+.hdr-logo{height:38px;width:auto;display:block;object-fit:contain;background:transparent}
+.step-pill{font-family:'DM Mono',monospace;font-size:11px;background:rgba(255,255,255,.1);border-radius:20px;padding:4px 10px;color:rgba(255,255,255,.5);white-space:nowrap}
+.step-pill b{color:var(--bm);font-weight:600}
+.prog-bar{height:3px;background:var(--bor);position:sticky;top:64px;z-index:199}
+.prog-fill{height:100%;background:var(--blue);transition:width .35s ease}
+.screen{display:none;padding:18px 16px 110px;max-width:600px;margin:0 auto}
+.screen.active{display:block}
+.cbanner{background:#0e0e22;border-radius:var(--rad);overflow:hidden;margin-bottom:18px;box-shadow:var(--sdm)}
+.bt{padding:16px 18px 14px}
+.bn{font-size:17px;font-weight:700;color:#fff;margin-bottom:3px}
+.ba{font-size:12px;color:rgba(255,255,255,.45);margin-bottom:12px}
+.ccs{display:flex;flex-direction:column;gap:7px}
+.cc{background:rgba(255,255,255,.07);border-radius:8px;padding:9px 12px;display:flex;align-items:flex-start;gap:9px}
+.cci{font-size:16px;flex-shrink:0;margin-top:1px}
+.ccl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--bm);margin-bottom:1px}
+.cct{font-size:13px;color:rgba(255,255,255,.82);line-height:1.5}
+.cct a{color:#7eb8ff;text-decoration:none}
+.bmap{height:155px;border-top:1px solid rgba(255,255,255,.08);overflow:hidden}
+.bmap iframe{width:100%;height:100%;border:none;display:block;filter:saturate(.7)}
+.zmedia-photos{display:grid;gap:6px;margin-bottom:6px}
+.zmedia-photos.single{grid-template-columns:1fr}
+.zmedia-photos.multi{grid-template-columns:1fr 1fr}
+.zmedia-photos img{width:100%;border-radius:var(--rsm);object-fit:cover;max-height:180px;display:block}
+.zmedia-fp{width:100%;border-radius:var(--rsm);object-fit:contain;max-height:140px;display:block;background:var(--su2)}
+.zmedia-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--mut);margin-bottom:4px;margin-top:8px}
+.card{background:var(--sur);border:1px solid var(--bor);border-radius:var(--rad);padding:17px;margin-bottom:13px;box-shadow:var(--shd)}
+.ct{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--blue);margin-bottom:13px}
+.sh{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:var(--blue);padding:8px 0 10px;border-bottom:2px solid var(--bl);margin:18px 0 14px}
+.sh:first-child{margin-top:0}
+.coa-banner{background:#0e0e22;border-radius:var(--rsm);padding:10px 14px;margin:18px 0 14px;color:#fff;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;display:flex;align-items:center;gap:8px}
+.svc-banner{background:#1a1aff;border-radius:var(--rsm);padding:10px 14px;margin:18px 0 14px;color:#fff;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;display:flex;align-items:center;gap:8px}
+label{display:block;font-size:11px;font-weight:600;color:var(--mut);margin-bottom:5px;text-transform:uppercase;letter-spacing:.07em}
+input[type=text],input[type=date],input[type=password],textarea,select{width:100%;background:var(--su2);border:1.5px solid var(--bor);border-radius:var(--rsm);color:var(--txt);font-family:'DM Sans',sans-serif;font-size:15px;padding:11px 13px;outline:none;transition:border-color .2s;-webkit-appearance:none;appearance:none}
+input:focus,textarea:focus,select:focus{border-color:var(--blue);background:#fff}
+textarea{resize:vertical;min-height:78px}
+.field{margin-bottom:13px}
+.scope-list{list-style:none}
+.scope-list li{display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px solid var(--bor);font-size:13px;line-height:1.4}
+.scope-list li:last-child{border-bottom:none}
+.sbullet{width:6px;height:6px;border-radius:50%;background:var(--blue);flex-shrink:0;margin-top:6px}
+.sg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stb{padding:13px 6px;border:1.5px solid var(--bor);border-radius:var(--rsm);background:var(--su2);color:var(--mut);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .15s;text-align:center}
+.stb.sel{background:var(--bl);border-color:var(--blue);color:var(--blue)}
+.stb.callout.sel{background:var(--al);border-color:var(--amb);color:var(--amb)}
+.cex{display:none;margin-top:12px}
+.cex.show{display:block}
+.yw{margin-bottom:13px}
+.yq{font-size:14px;font-weight:500;margin-bottom:7px;line-height:1.4}
+.yr{display:flex;gap:8px}
+.yb{flex:1;padding:11px;border:1.5px solid var(--bor);border-radius:var(--rsm);background:var(--su2);color:var(--mut);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .15s;text-align:center}
+.yb.yes.on{background:var(--gl);border-color:var(--grn);color:var(--grn)}
+.yb.no.on{background:var(--rl);border-color:var(--red);color:var(--red)}
+.cr{display:flex;gap:8px;margin-bottom:13px}
+.cb{flex:1;padding:10px 4px;border:1.5px solid var(--bor);border-radius:var(--rsm);background:var(--su2);color:var(--mut);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;text-align:center}
+.cb.on[data-val=Good]{background:var(--gl);border-color:var(--grn);color:var(--grn)}
+.cb.on[data-val=Medium]{background:var(--al);border-color:var(--amb);color:var(--amb)}
+.cb.on[data-val=Poor]{background:var(--rl);border-color:var(--red);color:var(--red)}
+.zw{margin-bottom:10px}
+.zh{display:flex;align-items:center;gap:11px;padding:14px 16px;background:var(--sur);border:1.5px solid var(--bor);border-radius:var(--rad);cursor:pointer;transition:all .15s;box-shadow:var(--shd)}
+.zh.open{border-radius:var(--rad) var(--rad) 0 0;border-color:var(--blue);border-bottom-color:var(--bl)}
+.znum{width:30px;height:30px;background:var(--blue);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:13px;color:#fff;font-weight:500;flex-shrink:0}
+.znum.dn{background:var(--grn)}
+.ztitle{flex:1;font-size:14px;font-weight:600}
+.zbadge{font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;flex-shrink:0}
+.zbadge.pend{background:var(--su2);color:var(--mut)}
+.zbadge.done{background:var(--gl);color:var(--grn)}
+.zchev{color:var(--blue);font-size:22px;font-weight:700;transition:transform .2s;flex-shrink:0;line-height:1}
+.zh.open .zchev{transform:rotate(90deg)}
+.zb{display:none;background:var(--sur);border:1.5px solid var(--blue);border-top:none;border-radius:0 0 var(--rad) var(--rad);padding:18px}
+.zb.open{display:block}
+.pa-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.pa-btn{padding:13px 8px;border:1.5px solid var(--bor);border-radius:var(--rsm);background:var(--su2);color:var(--txt);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;text-align:center;transition:all .15s;position:relative;overflow:hidden}
+.pa-btn:hover{border-color:var(--blue);background:var(--bl)}
+.pa-btn input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.pg{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:8px}
+.pt{aspect-ratio:1;border-radius:var(--rsm);overflow:hidden;position:relative;background:var(--su2)}
+.pt img,.pt video{width:100%;height:100%;object-fit:cover}
+.pdel{position:absolute;top:3px;right:3px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:22px;height:22px;color:#fff;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1}
+.upload-prog{height:3px;background:var(--bor);border-radius:2px;margin-top:6px;overflow:hidden;display:none}
+.upload-prog-fill{height:100%;background:var(--blue);transition:width .3s}
+.rr{display:flex;justify-content:space-between;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--bor);font-size:14px}
+.rr:last-child{border-bottom:none}
+.rl2{color:var(--mut);font-size:13px;flex-shrink:0;margin-right:12px;max-width:120px}
+.rv{font-weight:600;text-align:right;flex:1}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;font-family:'DM Mono',monospace;text-transform:uppercase;margin-right:3px}
+.tq1{background:var(--bl);color:var(--blue)}.tq2{background:var(--gl);color:var(--grn)}.tq3{background:var(--al);color:var(--amb)}.tq4{background:#f3eeff;color:#7744cc}.tco{background:var(--rl);color:var(--red)}
+.sck{width:70px;height:70px;background:var(--gl);border:2px solid var(--grn);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:30px;margin:36px auto 20px}
+.sti{text-align:center;font-size:22px;font-weight:700;margin-bottom:6px}
+.ssu{text-align:center;font-size:14px;color:var(--mut);margin-bottom:28px}
+.inv{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:70vh;padding:40px 20px;text-align:center}
+.bnav{position:fixed;bottom:0;left:0;right:0;padding:12px 16px 26px;background:linear-gradient(to top,var(--bg) 55%,transparent);display:flex;gap:9px;max-width:600px;margin:0 auto;z-index:100}
+.btn{flex:1;padding:15px;border-radius:var(--rad);border:none;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:all .15s;text-align:center}
+.bp{background:var(--blue);color:#fff;box-shadow:0 3px 12px rgba(26,26,255,.3)}
+.bg2{background:var(--grn);color:#fff;box-shadow:0 3px 12px rgba(0,165,80,.3)}
+.bs{background:var(--sur);color:var(--txt);border:1.5px solid var(--bor);flex:0 0 auto;padding:15px 18px;box-shadow:var(--shd)}
+.abox{background:var(--al);border:1px solid #f0b030;border-radius:var(--rsm);padding:11px 13px;font-size:13px;color:var(--amb);margin-bottom:13px}
+.sbox{background:var(--bl);border-left:3px solid var(--blue);border-radius:0 var(--rsm) var(--rsm) 0;padding:10px 12px;margin-bottom:14px;font-size:12px;color:var(--blue);font-weight:500}
+.mdb{width:100%;margin-top:14px;padding:13px;background:var(--grn);color:#fff;border:none;border-radius:var(--rsm);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer}
+.spin{display:inline-block;width:17px;height:17px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:7px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:#0e0e22;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+/* ADMIN */
+#admin-wrap{display:none;max-width:720px;margin:0 auto;padding:20px 16px 80px}
+.admin-hdr{display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-top:4px}
+.admin-hdr h1{font-size:22px;font-weight:700;flex:1}
+.admin-home-btn{padding:8px 16px;background:var(--su2);border:1.5px solid var(--bor);border-radius:var(--rsm);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;color:var(--txt);text-decoration:none}
+.asec{background:var(--sur);border:1px solid var(--bor);border-radius:var(--rad);padding:20px;margin-bottom:16px;box-shadow:var(--shd)}
+.asec h3{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--blue);margin-bottom:16px}
+.tab-row{display:flex;gap:6px;margin-bottom:16px}
+.tab-btn{padding:10px 18px;border-radius:var(--rsm);border:1.5px solid var(--bor);background:var(--su2);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;color:var(--mut);transition:all .15s}
+.tab-btn.active{background:var(--bl);border-color:var(--blue);color:var(--blue)}
+.cliitem{border-bottom:1px solid var(--bor);overflow:hidden}
+.cliitem:last-child{border-bottom:none}
+.cli-hdr{display:flex;align-items:center;gap:10px;padding:12px 0;cursor:pointer;user-select:none}
+.cli-hdr:hover .cliname{color:var(--blue)}
+.cliname{font-weight:600;font-size:14px;flex:1;transition:color .15s}
+.clislug{font-family:'DM Mono',monospace;font-size:10px;color:var(--blue);background:var(--bl);padding:2px 6px;border-radius:4px}
+.cli-chev{color:var(--blue);font-size:20px;font-weight:700;transition:transform .2s;flex-shrink:0;line-height:1}
+.cli-chev.open{transform:rotate(90deg)}
+.cli-detail{display:none;padding:0 0 14px}
+.cli-detail.open{display:block}
+.cliurl{font-size:11px;color:var(--mut);margin-bottom:8px;word-break:break-all}
+.cliacts{display:flex;gap:6px;flex-wrap:wrap}
+.abtn{padding:7px 12px;border-radius:6px;border:none;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
+.ae{background:var(--bl);color:var(--blue)}.ad{background:var(--rl);color:var(--red)}.ac{background:var(--gl);color:var(--grn)}.acp{background:#f3eeff;color:#7744cc}
+.del-confirm{background:var(--rl);border:1px solid var(--red);border-radius:var(--rsm);padding:12px;margin-top:8px;display:none}
+.del-confirm input{margin-bottom:8px}
+/* MODAL EDITOR */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;display:none;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px}
+.modal-overlay.open{display:flex}
+.modal-box{background:var(--sur);border-radius:var(--rad);padding:24px;width:100%;max-width:640px;margin:auto;box-shadow:0 8px 40px rgba(0,0,0,.25);position:relative}
+.modal-close{position:absolute;top:14px;right:14px;background:var(--su2);border:none;border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--mut)}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+@media(max-width:480px){.fgrid{grid-template-columns:1fr}}
+.ze{background:var(--su2);border:1px solid var(--bor);border-radius:var(--rsm);padding:14px;margin-bottom:10px;position:relative}
+.ze h4{font-size:13px;font-weight:600;margin-bottom:10px}
+.zrmbtn{position:absolute;top:10px;right:10px;background:var(--rl);color:var(--red);border:none;border-radius:4px;padding:3px 8px;font-size:11px;font-weight:700;cursor:pointer}
+.sirow{display:flex;gap:6px;margin-bottom:6px;align-items:center}
+.sirow input{flex:1;font-size:13px;padding:7px 10px}
+.sirm{background:none;border:none;color:var(--red);font-size:18px;cursor:pointer;padding:0 4px;flex-shrink:0}
+.addsi{background:none;border:1px dashed var(--bor);border-radius:6px;padding:6px 12px;font-size:12px;color:var(--mut);cursor:pointer;width:100%;margin-top:4px}
+.addzb{width:100%;padding:12px;background:var(--bl);color:var(--blue);border:1.5px dashed var(--blue);border-radius:var(--rsm);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:4px}
+.savebtn{width:100%;padding:14px;background:var(--blue);color:#fff;border:none;border-radius:var(--rsm);font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px}
+.urlbox{background:var(--bl);border-radius:var(--rsm);padding:12px 14px;font-family:'DM Mono',monospace;font-size:12px;color:var(--blue);word-break:break-all;margin-top:10px;cursor:pointer;border:1px solid var(--blue)}
+.zphumb{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.zphumb-item{position:relative;width:70px;height:70px;border-radius:6px;overflow:hidden;background:var(--su2)}
+.zphumb-item img{width:100%;height:100%;object-fit:cover}
+.zphumb-del{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.zpuarea{border:2px dashed var(--bor);border-radius:var(--rsm);padding:10px;text-align:center;cursor:pointer;position:relative;margin-top:8px;background:var(--su2);font-size:12px;color:var(--mut)}
+.zpuarea input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.cbrow{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+.cbrow label{text-transform:none;font-size:13px;display:flex;align-items:center;gap:5px;cursor:pointer;font-weight:400;letter-spacing:0}
+.cbrow input[type=checkbox]{width:16px;height:16px;accent-color:var(--blue);cursor:pointer}
+.dlbtn{width:100%;padding:14px;background:#0e0e22;color:#fff;border:none;border-radius:var(--rsm);font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px}
+.sub-item{padding:12px 0;border-bottom:1px solid var(--bor);cursor:pointer;transition:background .15s}
+.sub-item:last-child{border-bottom:none}
+.sub-item:hover{background:var(--su2);margin:0 -17px;padding:12px 17px}
+.sub-meta{font-size:11px;color:var(--mut);margin-top:3px}
+.sub-tags{margin-top:4px}
+.admin-login{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:70vh;padding:40px 20px;text-align:center}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+
+<div class="hdr">
+  <img class="hdr-logo" src="https://drive.google.com/uc?export=view&id=1ARPLU1ATLOqz5kjBgjO2PkACSQiMbJHw" alt="TKM9 Service Desk">
+  <div class="step-pill" id="step-pill">Step <b id="step-cur">1</b> of 3</div>
+</div>
+<div class="prog-bar" id="prog-bar"><div class="prog-fill" id="prog" style="width:33%"></div></div>
+
+<div id="invalid-screen" style="display:none">
+  <div class="inv">
+    <div style="font-size:44px;margin-bottom:14px">&#128274;</div>
+    <div style="font-size:20px;font-weight:700;margin-bottom:8px">Invalid Link</div>
+    <div style="font-size:14px;color:var(--mut)">Please contact the TKM9 Service Desk.<br><br>
+    <a href="tel:0423700339" style="color:var(--blue)">0423 700 339</a><br>
+    <a href="/cdn-cgi/l/email-protection#691a1c1919061b1d291d0204500e1b061c19470a0604" style="color:var(--blue)"><span class="__cf_email__" data-cfemail="3c4f494c4c534e487c485751055b4e53494c125f5351">[email&#160;protected]</span></a></div>
+  </div>
+</div>
+
+<!-- SCREEN 1 -->
+<div class="screen active" id="screen-1">
+  <div id="banner-1"></div>
+  <div style="font-size:20px;font-weight:700;margin-bottom:4px">Start Report</div>
+  <div style="font-size:13px;color:var(--mut);margin-bottom:18px">Enter your details and select service type.</div>
+  <div class="card">
+    <div class="ct">Technician Details</div>
+    <div class="field"><label>Full Name</label><input type="text" id="tech-name" placeholder="Your name" autocorrect="off" autocapitalize="words"></div>
+    <div class="field"><label>Mobile</label><input type="text" id="tech-mobile" placeholder="Your mobile number"></div>
+    <div class="field"><label>Date of Service</label><input type="date" id="service-date"></div>
+  </div>
+  <div class="card">
+    <div class="ct">Service Type — Select All That Apply</div>
+    <div class="sg">
+      <button class="stb" data-val="Q1: JAN-MAR">Q1 &middot; Jan&ndash;Mar</button>
+      <button class="stb" data-val="Q2: APR-JUN">Q2 &middot; Apr&ndash;Jun</button>
+      <button class="stb" data-val="Q3: JUL-SEP">Q3 &middot; Jul&ndash;Sep</button>
+      <button class="stb" data-val="Q4: OCT-DEC">Q4 &middot; Oct&ndash;Dec</button>
+    </div>
+    <div style="margin:8px 0 0;text-align:center;font-size:11px;color:var(--mut);font-weight:600;letter-spacing:.05em">+ OPTIONALLY ADD</div>
+    <div style="margin-top:8px"><button class="stb callout" data-val="CALLOUT" style="width:100%">&#9889; Callout / Ad-hoc</button></div>
+    <div class="cex" id="callout-extra">
+      <div class="field" style="margin-top:12px"><label>Callout Reason</label><input type="text" id="callout-reason" placeholder="e.g. Screen unresponsive, unit offline&hellip;"></div>
+      <div class="field"><label>Reported By</label><input type="text" id="callout-reporter" placeholder="e.g. Client / TKM9 Service Desk"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN 2 -->
+<div class="screen" id="screen-2">
+  <div id="banner-2"></div>
+  <div style="font-size:20px;font-weight:700;margin-bottom:4px">Service Zones</div>
+  <div style="font-size:13px;color:var(--mut);margin-bottom:18px">Tap each zone to complete.</div>
+  <div id="zones-container"></div>
+</div>
+
+<!-- SCREEN 3 -->
+<div class="screen" id="screen-3">
+  <div style="font-size:20px;font-weight:700;margin-bottom:4px">Review &amp; Submit</div>
+  <div style="font-size:13px;color:var(--mut);margin-bottom:18px">Check everything then submit.</div>
+  <div class="card"><div class="ct">Summary</div><div id="review-content"></div></div>
+  <div class="card">
+    <div class="ct">Overall Notes &amp; Sign-off</div>
+    <div class="field"><label>Additional Notes (optional)</label><textarea id="overall-notes" placeholder="Further observations, follow-up items, notes for TKM9 Service Desk&hellip;"></textarea></div>
+    <div class="yw">
+      <div class="yq">Is follow-up work required?</div>
+      <div class="yr"><button class="yb yes" data-field="followup" data-val="Yes">Yes</button><button class="yb no" data-field="followup" data-val="No">No</button></div>
+    </div>
+    <div class="yw" style="margin-bottom:0">
+      <div class="yq">I confirm this service has been completed.</div>
+      <div class="yr"><button class="yb yes" data-field="ack" data-val="confirmed" style="flex:none;padding:12px 28px">Confirm &#10003;</button></div>
+    </div>
+  </div>
+  <div class="abox" id="ack-error" style="display:none">Please confirm acknowledgment before submitting.</div>
+</div>
+
+<!-- SCREEN 4 SUCCESS -->
+<div class="screen" id="screen-4">
+  <div class="sck">&#10003;</div>
+  <div class="sti">Report Submitted</div>
+  <div class="ssu">TKM9 Service Desk has been notified.</div>
+  <div class="card" id="success-detail"></div>
+  <div style="margin-top:16px"><button class="btn bs" style="width:100%" onclick="hardReset()">Start New Report</button></div>
+</div>
+
+<div class="bnav" id="bottom-nav">
+  <button class="btn bs" id="btn-back" style="display:none" onclick="goBack()">&larr; Back</button>
+  <button class="btn bp" id="btn-next" onclick="goNext()">Continue &rarr;</button>
+</div>
+
+<!-- ADMIN -->
+<div id="admin-wrap">
+  <div id="admin-login-view">
+    <div class="admin-login">
+      <img src="https://drive.google.com/uc?export=view&id=1ARPLU1ATLOqz5kjBgjO2PkACSQiMbJHw" style="height:44px;margin-bottom:20px;background:transparent">
+      <div style="font-size:22px;font-weight:700;margin-bottom:8px">Admin Panel</div>
+      <div style="font-size:14px;color:var(--mut);margin-bottom:24px">TKM9 Service &amp; Support Desk</div>
+      <div style="width:100%;max-width:320px">
+        <input type="password" id="admin-pw" placeholder="Password" style="margin-bottom:10px;text-align:center" onkeydown="if(event.key==='Enter')checkPW()">
+        <button class="savebtn" onclick="checkPW()">Log In</button>
+        <div style="font-size:12px;color:var(--red);margin-top:8px;display:none" id="pw-err">Incorrect password</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="admin-main-view" style="display:none">
+    <div class="admin-hdr">
+      <img src="https://drive.google.com/uc?export=view&id=1ARPLU1ATLOqz5kjBgjO2PkACSQiMbJHw" style="height:34px;background:transparent">
+      <h1>Service Reports</h1>
+      <button class="admin-home-btn" onclick="exitAdmin()">&#127968; Home</button>
+    </div>
+
+    <div class="tab-row">
+      <button class="tab-btn active" id="tab-clients" onclick="showTab('clients')">&#128101; Clients</button>
+      <button class="tab-btn" id="tab-submissions" onclick="showTab('submissions')">&#128196; Submissions</button>
+    </div>
+
+    <div id="tab-clients-content">
+      <div class="asec">
+        <h3>Active Clients (24)</h3>
+        <input type="text" id="admin-search" placeholder="&#128269; Search clients..." style="margin-bottom:12px" oninput="renderClientList()">
+        <div id="client-list-admin"></div>
+        <button class="savebtn" style="margin-top:12px;background:var(--sur);color:var(--blue);border:1.5px solid var(--blue);box-shadow:none" onclick="startNewClient()">+ Add New Client</button>
+      </div>
+      <div id="dl-section" class="asec" style="display:none">
+        <h3>&#10003; Changes Saved</h3>
+        <p style="font-size:14px;color:var(--mut);margin-bottom:14px">Download and redeploy to make changes live.</p>
+        <button class="dlbtn" onclick="downloadFile()">&#8595; Download index.html</button>
+      </div>
+    </div>
+
+    <div id="tab-submissions-content" style="display:none">
+      <div class="asec" id="subs-list-panel">
+        <h3>Submitted Reports</h3>
+        <div id="submissions-list"></div>
+      </div>
+      <div id="sub-detail-panel" style="display:none">
+        <div class="asec">
+          <h3 id="sub-detail-title">Report</h3>
+          <div id="sub-detail-content"></div>
+          <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
+            <button class="abtn ac" style="padding:10px 16px" onclick="downloadSubPDF()">&#8595; Download PDF</button>
+            <button class="abtn ae" style="padding:10px 16px" onclick="editSubmission()">&#9998; Edit Report</button>
+            <button class="abtn" style="padding:10px 16px;background:var(--su2);color:var(--txt)" onclick="showSubsList()">&#8592; Back</button>
+          </div>
+        </div>
+      </div>
+      <div id="sub-edit-panel" style="display:none">
+        <div class="asec">
+          <h3>Edit Report</h3>
+          <div id="sub-edit-content"></div>
+          <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
+            <button class="savebtn" style="flex:1" onclick="saveSubEdit()">Save Changes</button>
+            <button class="abtn" style="padding:14px 16px;background:var(--su2);color:var(--txt)" onclick="cancelSubEdit()">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITOR -->
+<div class="modal-overlay" id="editor-modal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal()">&#215;</button>
+    <h2 id="editor-heading" style="font-size:18px;font-weight:700;margin-bottom:18px">Client</h2>
+    <div style="max-height:70vh;overflow-y:auto;padding-right:4px">
+      <div class="fgrid">
+        <div class="field"><label>Client Name</label><input type="text" id="e-name" placeholder="e.g. Westfield Knox"></div>
+        <div class="field"><label>URL Slug</label><input type="text" id="e-slug" placeholder="e.g. westfieldknox" oninput="slugify()"></div>
+      </div>
+      <div class="field"><label>Address</label><input type="text" id="e-addr"></div>
+      <div class="fgrid">
+        <div class="field"><label>On Arrival Instructions</label><input type="text" id="e-arrival"></div>
+        <div class="field"><label>Mobile</label><input type="text" id="e-mobile" placeholder="0423 700 339"></div>
+      </div>
+      <div class="field"><label>Client URL</label><div class="urlbox" id="url-preview" onclick="copyURL()">Enter slug above</div></div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--blue);margin:16px 0 10px">Zones</div>
+      <div id="zones-editor-wrap"></div>
+      <button class="addzb" onclick="adminAddZone()">+ Add Zone</button>
+      <button class="savebtn" onclick="adminSaveClient()" style="margin-top:16px">Save Client</button>
+    </div>
+  </div>
+</div>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+const APPS_SCRIPT_URL=window.location.href.split('?')[0].replace(/\/dev$/,'/exec');
+const ADMIN_PASSWORD="tkm9admin2024";
+const NETLIFY_URL=window.location.origin+window.location.pathname.replace(/\/exec.*/,"/exec");
+const LOGO_SRC="https://drive.google.com/uc?export=view&id=1ARPLU1ATLOqz5kjBgjO2PkACSQiMbJHw";
+let CLIENTS={"chadstone": {"name": "Chadstone Shopping Centre", "address": "1341 Dandenong Rd, Malvern East VIC 3145", "contacts": [{"icon": "&#128274;", "label": "On Arrival", "text": "Contact Chadstone Security Office: <a href=\"tel:0395631751\">0395631751</a>"}, {"icon": "&#128222;", "label": "TKM9 Service Desk", "text": "<a href=\"tel:0423700339\">0423 700 339</a>"}], "mapEmbed": "https://maps.google.com/maps?q=1341+Dandenong+Rd,+Malvern+East+VIC+3145&output=embed", "zones": [{"name": "Zone 1 - Play Space (Front of Baby Bunting)", "photos": [""], "floorplan": "", "scope": ["Ensure game/content and touch screens are working", "Confirm sound is on and units are connected to internet", "Full clean and wipe-down of all surfaces", "Thoroughly clean all screens - especially edges, test touch capability", "Wipe down internals: media player, router, camera and all cables", "Clean out area between screens and shells", "Check all lighting items are working", "Check all sound items are working", "Review all fixings - is anything loose", "Complete final testing", "Confirm all items are online with TKM9 Service Desk before leaving"], "hasScreens": true, "hasSound": true, "hasLight": true, "soundItems": ["Kidszone/s", "Boink/s", "Xylophone"], "lightItems": ["Lightstrips", "Stone/s", "Boink/s", "Xylophone"]}, {"name": "Zone 2 - Seating", "photos": ["", ""], "floorplan": "", "scope": ["Full clean and wipe-down of all surfaces", "Check all fixings are secure", "Inspect all material for rips, wear or damage", "Note any items requiring repair or replacement"], "hasScreens": false, "hasSound": false, "hasLight": false, "soundItems": [], "lightItems": []}, {"name": "Zone 3 - Small Playspace: Beehive", "photos": [""], "floorplan": "", "scope": ["Ensure game/content and touch screen are working", "Confirm sound is on and unit is connected to internet", "Full clean and wipe-down of all surfaces", "Thoroughly clean screen - especially edges, test touch capability", "Wipe down internals: media player, router, camera and cables", "Clean out area between screen and shell", "Complete final testing", "Confirm unit is online with TKM9 Service Desk before leaving"], "hasScreens": true, "hasSound": true, "hasLight": false, "soundItems": ["Kidszone Single Sided"], "lightItems": []}]}, "portadelaide": {"name": "Port Adelaide Plaza", "address": "200-220 Commercial Rd, Port Adelaide SA 5015", "contacts": [{"icon": "&#128274;", "label": "On Arrival", "text": "Report to Security Office"}, {"icon": "&#128222;", "label": "TKM9 Service Desk", "text": "<a href=\"tel:0423700339\">0423 700 339</a>"}], "mapEmbed": "https://maps.google.com/maps?q=200-220+Commercial+Rd,+Port+Adelaide+SA+5015&output=embed", "zones": [{"name": "Zone 1 - Play Space", "photos": [""], "floorplan": "", "scope": ["Ensure game/content and touch screens are working", "Confirm sound is on and units are connected to internet", "Full clean and wipe-down of all surfaces", "Thoroughly clean all screens - especially edges, test touch capability", "Wipe down internals: media player, router, camera and all cables", "Clean out area between screens and shells", "Check all lighting items are working", "Check all sound items are working", "Review all fixings - is anything loose", "Complete final testing", "Confirm all items are online with TKM9 Service Desk before leaving"], "hasScreens": true, "hasSound": true, "hasLight": true, "soundItems": ["Double Sided Kidszone", "Sapling Tree"], "lightItems": ["Slide Top and Tunnel", "Sapling Tree"]}, {"name": "Zone 2 - Parents Room", "photos": [""], "floorplan": "", "scope": ["Ensure game/content screens working in both wall-mounted Kidszone Minis and 2x Round Screen in boat", "Sound is on and units are connected to internet", "Review all fixings - is anything loose", "Full clean and wipe-down of all surfaces", "Thoroughly clean all screens - test touch capability", "Wipe down internals: media player, router, camera and cables", "Check all lighting items working (where applicable)", "Check all sound items working (where applicable)", "Confirm all items are online with TKM9 Service Desk before leaving"], "hasScreens": true, "hasSound": true, "hasLight": true, "soundItems": ["Kidszone Minis", "Boat: Round Screen"], "lightItems": ["Boat: Floor", "Boat: Mast"]}]}, "westfieldpv": {"name": "Westfield Plenty Valley", "address": "415 McDonalds Rd, Mill Park VIC 3082", "contacts": [{"icon": "&#128274;", "label": "On Arrival", "text": "Report to Security Office [BEAKON] - next to Connor"}, {"icon": "&#128222;", "label": "TKM9 Service Desk", "text": "<a href=\"tel:0423700339\">0423 700 339</a>"}], "mapEmbed": "https://maps.google.com/maps?q=415+McDonalds+Rd,+Mill+Park+VIC+3082&output=embed", "zones": [{"name": "Zone 1 - Play Space (Single Sided Kidszone)", "photos": [""], "floorplan": "", "scope": ["Ensure game/content and touch screen are working", "Confirm sound is on and unit is connected to internet", "Full clean and wipe-down of all surfaces", "Thoroughly clean screen - especially edges, test touch capability", "Wipe down internals: media player, router, camera and cables", "Clean out area between screen and shell", "Complete final testing", "Confirm unit is online with TKM9 Service Desk before leaving"], "hasScreens": true, "hasSound": true, "hasLight": false, "soundItems": ["Single Sided Kidszone"], "lightItems": []}]}, "sealife": {"name": "Merlin SeaLife Rockpool Melbourne", "address": "Corner Flinders St & King St, Melbourne VIC 3000", "contacts": [{"icon": "&#128274;", "label": "On Arrival", "text": "Report to Security. Pre-Book: <a href=\"tel:0477020661\">0477 020 661</a> (Jenny Thirgood). Advise you are from TKM9 Service Team - servicing the Rockpool Experience."}, {"icon": "&#128222;", "label": "TKM9 Service Desk", "text": "<a href=\"mailto:support@tkm9group.com\">support@tkm9group.com</a>"}], "mapEmbed": "https://maps.google.com/maps?q=Corner+Flinders+St+&+King+St,+Melbourne+VIC+3000&output=embed", "zones": [{"name": "Zone 1 - Projection Wall", "photos": ["", "", ""], "floorplan": "", "scope": ["Ensure digital content is working", "Confirm sound on and units connected to internet", "Check projection aligned/mapped to canvas", "Check all 3 motion detection sensors working and calibrated", "Check sound calibrated as intended", "Full clean and wipe-down of all surfaces", "Gently dust clean all screens and check sensory devices", "Inspect all LED panels - no dead pixels or faded areas", "Wipe down internals: media player, router, camera and cables", "Check for any loose fixtures", "Complete final testing", "Confirm all items online with TKM9 Service Desk before leaving"], "hasScreens": true, "hasSound": true, "hasLight": false, "soundItems": [], "lightItems": [], "isProjection": true}, {"name": "Zone 2 - Interactive Tray and Ceiling Lights", "photos": [], "floorplan": "", "scope": ["Inspect all LED panels - check for damaged pixels or faded areas", "Check colour and calibration on LED screen", "Check sound calibration", "Check animal tray - all animals working with screen", "Check all 5 animals present in tray", "Clean all equipment and surfaces", "Complete final testing"], "hasScreens": true, "hasSound": true, "hasLight": true, "soundItems": [], "lightItems": [], "isSpecial": true}, {"name": "Server Room", "photos": [], "floorplan": "", "scope": ["Check all equipment for airflow and heat", "Confirm room clear of clutter", "Check signal strength as intended", "Wipe down internals and surfaces", "Note any concerns"], "hasScreens": false, "hasSound": false, "hasLight": false, "soundItems": [], "lightItems": [], "isServerRoom": true}]}, "adelaidewomens": {"name": "Adelaide Women's and Children's Hospital", "address": "Adelaide SA", "contacts": [{"icon": "&#128274;", "label": "On Arrival", "text": "Report to Security"}, {"icon": "&#128222;", "label": "TKM9 Service Desk", "text": "<a href=\"tel:0423700339\">0423 700 339</a>"}], "mapEmbed": "https://maps.google.com/maps?q=Adelaide+SA&output=embed", "zones": [{"name": "Zone 1 - Play Space", "photos": ["", ""], "floorplan": "", "scope": ["Ensure game/content and touch screens are working", "Confirm sound is on and units are connected to internet", "Full clean and wipe-down of all surfaces", "Thoroughly clean all screens - especially edges, test touch capability", "Wipe down internals: media player, router, camera and all cables", "Clean out area between screens and shells", "Check all lighting items are working", "Check all sound items are working", "Review all fixings - is anything loose", "Complete final testing", "Confirm all items are online with TKM9 Service Desk before leaving"], "hasScreens": true, "hasSound": true, "hasLight": false, "soundItems": [], "lightItems": []}]}, "banksia": {"name": "Banksia Shopping Centre", "address": "Banksia NSW", "contacts": [{"icon": "&#128274;", "label": "On Arrival", "text": "Report to Security"}, {"icon": "&#128222;", "label": "TKM9 Service Desk", "text": "<a href=\"tel:0423700339\">0423 700 339</a>"}], "mapEmbed": "https://maps.google.com/maps?q=Banksia+NSW&output=embed", "zones": [{"name": "Zone 1 - Playspace (Outside Coles)", "photos": [""], "floorplan": "", "scope": ["Ensure game/content and touch screen are working", "Confirm sound is on and unit is connected to internet", "Full clean and wipe-down of all surfaces", "Thoroughly clean screen - especially edges, test touch capability", "Wipe down internals: media player, router, camera and cables", "Clean out area between screen and shell", "Complete final testing", "Confirm unit is online with TKM9 Service Desk before leaving"], "hasScreens": true, "hasSound": true, "hasLight": false, "soundItems": ["Single Sided Kidszone"], "lightItems": []}]}, "blacktown": {"name": "Blacktown", "address": "Blacktown NSW", "contacts": [{"icon": "&#128274;", "label": "On Arrival", "text": "Report to Security - Location: Level 2 and Level 3"}, {"icon": "&#128222;", "label": "TKM9 Service Desk", "text": "<a href=\"tel:0423700339\">0423 700 339</a>"}], "mapEmbed": "https://maps.google.com/maps?q=Blacktown+NSW&output=embed", "zones": [{"name": "Zone 1 - Play Space", "photos": ["", ""], "floorplan": "", "scope": ["Ensure game/content and touch screens are working", "Confirm sound is on and units are connected to internet", "Full clean and wipe-down of all surfaces", "Thoroughly clean all screens - especially edges, test touch capability", "Wipe down internals: media player, router, camera and all cables", "Clean out area between screens and shells", "Check all lighting items are working", "Check all sound items are working", "Review all fixings - is anything loose", "Complete final testing", "Confirm all items are online with TKM9 Service Desk before leaving"], "hasScreens": true, "hasSound": true, "hasLight": false, "soundItems": [], "lightItems": []}]}, "brimbank": {"name": "Brimbank Central Shopping Centre", "address": "Brimbank VIC", "contacts": [{"icon": "&#128274;", "label": "On Arrival", "text": "Report to Security (located cyan corridor, post Centre)"}, {"icon": "&#128222;", "label": "TKM9 Service Desk", "text": "<a href=\"tel:0423700339\">0423 700 339</a>"}], "mapEmbed": "https://maps.google.com/maps?q=Brimbank+VIC&output=embed", "zones": [{"name": "Zone 1 - Playspace", "photos": ["", ""], "floorplan": "", "scope": ["Ensure game/content and touch screen are working", "Confirm sound is on and unit is connected to internet", "Full clean and wipe-down of all surfaces", "Thoroughly clean screen - especially edges, test touch capability", "Wipe down internals: media player, router, camera and cables", "Clean out area between screen and shell", "Complete final testing", "Confirm unit is online with TKM9 Service Desk before leaving"], "hasScreens": true, "hasSound": true, "hasLight": false, "soundItems": ["Single Sided Kidszone"], "lightItems": []}]}, "brisbaneairport": {"name": "Brisbane Airport (International)", "address": "Brisbane Airport QLD", "contacts": [{"icon": "&#128274;", "label": "On Arrival", "text": "Report to Security"}, {"icon": "&#128222;", "label": "TKM9 Service Desk", "text": "<a href=\"tel:0423700339\">0423 700 339</a>"}], "mapEmbed": "https://maps.google.com/maps?q=Brisbane+Airport+QLD&output=embed", "zones": [{"name": "Zone 1 - Play Space", "photos": [""], "floorplan": "", "scope": ["Ensure game/content and touch screens are working", "Confirm sound is on and units are connected to internet", "Full clean and wipe-down of all surfaces", "Thoroughly clean all screens - especially edges, test touch capability", "Wipe down internals: media player, router, camera and all cables", "Clean out area between screens and shells", "Check all lighting items are working", "Check all sound items are working", "Review all fixings - is anything loose", "Complete final testing", "Confirm all items are online with TKM9 Service Desk before leaving"], "hasScreens": true, "hasSound": true, "hasLight": false, "soundItems": [], "lightItems": []}]}, "cairnsairport": {"name": "Cairns Airport", "address": "Cairns Airport QLD", "contacts": [{"icon": "&#128274;", "label": "On Arrival", "text": "Report to Security - Zone 1: Domestic terminal"}, {"icon": "&#128222;", "label": "TKM9 Service Desk", "text": "<a href=\"tel:0423700339\">0423 700 339</a>"}], "mapEmbed": "https://maps.google.com/maps?q=Cairns+Airport+QLD&output=embed", "zones": [{"name": "Zone 1 - Double Sided Kidszone", "photos": [""], "floorplan": "", "scope": ["Ensure game/content and touch screens are working", "Confirm sound is on and units are connected to internet", "Full clean and wipe-down of all surfaces", "Thoroughly clean all screens - especially edges, test touch capability", "Wipe down internals: media player, router, camera and all cables", "Clean out area between screens and shells", "Check all lighting items are working", "Check all sound items are working", "Review all fixings - is anything loose", "Complete final testing", "Confirm all items are online with TKM9 Service Desk before leaving"], "hasScreens": true, "hasSound": true, "hasLight": false, "soundItems": ["Double Sided Kidszone"], "lightItems": []}, {"name": "Zone 2 - Parents Room (Mini)", "photos": [""], "floorplan": "", "scope": ["Ensure game/content and touch screen are working", "Confirm sound is on and unit is connected to internet", "Full clean and wipe-down of all surfaces", "Thoroughly clean screen - especially edges, test touch capability", "Wipe down internals: media player, router, camera and cables", "Clean out area between screen and shell", "Complete final testing", "Confirm unit is online with TKM9 Service Desk before leaving"], "hasScreens": true, "hasSound": true, "hasLight": false, "soundItems": ["Kidszone Mini"], "lightItems": []}]}, "castleplaza": {"name": "Castle Plaza Shopping Centre", "address": "Castle Plaza SA", "contacts": [{"icon": "&#128274;", "label": "On Arrival", "text": "Report to Security"}, {"icon": "&#128222;", "label": "TKM9 Service Desk", "text": "<a href=\"tel:0423700339\">0423 700 339</a>"}], "mapEmbed": "https://maps.google.com/maps?q=Castle+Plaza+SA&output=embed", "zones": [{"name": "Zone 1 - Play Space", "photos": ["", ""], "floorplan": "", "scope": ["Ensure game/content and touch screens are working", "Confirm sound is on and units are connected to internet", "Full clean and wipe-down of all surfaces", "Thoroughly clean all screens - especially edges, test touch capability", "Wipe down internals: media player, router, camera and all cables", "Clean out area between screens and shells", "Check all lighting items are working", "Check all sound items are working", "Review all fixings - is anything loose", "Complete final testing", "Confirm all items are online with TKM9 Service Desk before leaving"], "hasScreens": true, "hasSound": true, "hasLight": false, "soundItems": [], "lightItems": []}]}, "chevron": {"name": "Chevron Shopping Centre", "address": "Chevron QLD", "contacts": [{"icon": "&#128274;", "label": "On Arrival", "text": "Report to Security - Play Area: Ground Floor, Family Room (Downstairs)"}, {"icon": "&#128222;", "label": "TKM9 Service Desk", "text": "<a href=\"tel:0423700339\">0423 700 339</a>"}], "mapEmbed": "https://maps.google.com/maps?q=Chevron+QLD&output=embed", "zones": [{"name": "Zone 1 - Play Space (Ground Floor Family Room)", "photos": [""], "floorplan": "", "scope": ["Ensure game/content and touch screen are working", "Confirm sound is on and unit is connected to internet", "Full clean and wipe-down of all surfaces", "Thoroughly clean screen - especially edges, test touch capability", "Wipe down internals: media player, router, camera and cables", "Clean out area between screen and shell", "Complete final testing", "Confirm unit is online with TKM9 Service Desk before leaving"], "hasScreens": true, "hasSound": true, "hasLight": false, "soundItems": ["Single Sided Kidszone"], "lightItems": []}]}, "cranbourne": {"name": "Cranbourne Shopping Centre", "address": "Cranbourne VIC", "contacts": [{"icon": "&#128274;", "label": "On Arrival", "text": "Report to Security"}, {"icon": "&#128222;", "label": "TKM9 Service Desk", "text": "<a href=\"tel:0423700339\">0423 700 339</a>"}], "mapEmbed": "https://maps.google.com/maps?q=Cranbourne+VIC&output=embed", "zones": [{"name": "Zone 1 - Play Space (Single Sided Kidszone)", "photos": [""], "floorplan": "", "scope": ["Ensure game/content and touch screen are working", "Confirm sound is on and unit is connected to internet", "Full clean and wipe-down of all surfaces", "Thoroughly clean screen - especially edges, test touch capability", "Wipe down internals: media player, router, camera and cables", "Clean out area between screen and shell", "Complete final testing", "Confirm unit is online with TKM9 Service Desk before leaving"], "hasScreens": true, "hasSound": true, "hasLight": false, "soundItems": ["Single Sided Kidszone"], "lightItems": []}]}, "foresthill": {"name": "Forest Hill Chase Shopping Centre", "address": "Forest Hill VIC", "contacts": [{"icon": "&#128274;", "label": "On Arrival", "text": "Report to Security - Playspaces on Level 1, Level 2, and Level 3"}, {"icon": "&#128222;", "label": "TKM9 Service Desk", "text": "<a href=\"tel:0423700339\">0423 700 339</a>"}], "mapEmbed": "https://maps.google.com/maps?q=Forest+Hill+VIC&output=embed", "zones": [{"name": "Zone 1 - Play Space Level 1", "photos": ["", ""], "floorplan": "", "scope": ["Ensure game/content and touch screens are working", "Confirm sound is on and units are connected to internet", "Full clean and wipe-down of all surfaces", "Thoroughly clean all screens - especially edges, test touch capability", "Wipe down internals: media player, router, camera and all cables", "Clean out area between screens and shells", "Check all lighting items are working", "Check all sound items are working", "Review all fixings - is anything loose", "Complete final testing", "Confirm all items are online with TKM9 Service Desk before leaving"], "hasScreens": true, "hasSound": true, "hasLight": false, "soundItems": [], "lightItems": []}, {"name": "Zone 2 - Play Space Level 2 & 3", "photos": ["", ""], "floorplan": "", "scope": ["Ensure game/content and touch screens are working", "Confirm sound is on and units are connected to internet", "Full clean and wipe-down of all surfaces", "Thoroughly clean all screens - especially edges, test touch capability", "Wipe down internals: media player, router, camera and all cables", "Clean out area between screens and shells", "Check all lighting items are working", "Check all sound items are working", "Review all fixings - is anything loose", "Complete final testing", "Confirm all items are online with TKM9 Service Desk before leaving"], "hasScreens": true, "hasSound": true, "hasLight": false, "soundItems": [], "lightItems": []}]}, "queenslandchildrens": {"name": "Queensland Children's Hospital", "address": "South Brisbane QLD 4101", "contacts": [{"icon": "&#128274;", "label": "On Arrival", "text": "Report to Security"}, {"icon": "&#128222;", "label": "TKM9 Service Desk", "text": "<a href=\"tel:0423700339\">0423 700 339</a>"}], "mapEmbed": "https://maps.google.com/maps?q=South+Brisbane+QLD+4101&output=embed", "zones": [{"name": "Zone 1 - Play Space Area 1", "photos": ["", "", "", ""], "floorplan": "", "scope": ["Ensure game/content and touch screens are working", "Confirm sound is on and units are connected to internet", "Full clean and wipe-down of all surfaces", "Thoroughly clean all screens - especially edges, test touch capability", "Wipe down internals: media player, router, camera and all cables", "Clean out area between screens and shells", "Check all lighting items are working", "Check all sound items are working", "Review all fixings - is anything loose", "Complete final testing", "Confirm all items are online with TKM9 Service Desk before leaving"], "hasScreens": true, "hasSound": true, "hasLight": false, "soundItems": [], "lightItems": []}, {"name": "Zone 2 - Play Space Area 2", "photos": ["", "", ""], "floorplan": "", "scope": ["Ensure game/content and touch screens are working", "Confirm sound is on and units are connected to internet", "Full clean and wipe-down of all surfaces", "Thoroughly clean all screens - especially edges, test touch capability", "Wipe down internals: media player, router, camera and all cables", "Clean out area between screens and shells", "Check all lighting items are working", "Check all sound items are working", "Review all fixings - is anything loose", "Complete final testing", "Confirm all items are online with TKM9 Service Desk before leaving"], "hasScreens": true, "hasSound": true, "hasLight": false, "soundItems": [], "lightItems": []}]}, "sunshinecoast": {"name": "Sunshine Coast University Hospital", "address": "Sunshine Coast QLD", "contacts": [{"icon": "&#128274;", "label": "On Arrival", "text": "Report to Security"}, {"icon": "&#128222;", "label": "TKM9 Service Desk", "text": "<a href=\"tel:0423700339\">0423 700 339</a>"}], "mapEmbed": "https://maps.google.com/maps?q=Sunshine+Coast+QLD&output=embed", "zones": [{"name": "Zone 1 - Play Space", "photos": ["", "", ""], "floorplan": "", "scope": ["Ensure game/content and touch screens are working", "Confirm sound is on and units are connected to internet", "Full clean and wipe-down of all surfaces", "Thoroughly clean all screens - especially edges, test touch capability", "Wipe down internals: media player, router, camera and all cables", "Clean out area between screens and shells", "Check all lighting items are working", "Check all sound items are working", "Review all fixings - is anything loose", "Complete final testing", "Confirm all items are online with TKM9 Service Desk before leaving"], "hasScreens": true, "hasSound": true, "hasLight": false, "soundItems": [], "lightItems": []}]}, "toowoomba": {"name": "Toowoomba Hospital", "address": "Toowoomba QLD", "contacts": [{"icon": "&#128274;", "label": "On Arrival", "text": "Report to Security - Space: Marion Mockett Block Level 4"}, {"icon": "&#128222;", "label": "TKM9 Service Desk", "text": "<a href=\"tel:0423700339\">0423 700 339</a>"}], "mapEmbed": "https://maps.google.com/maps?q=Toowoomba+QLD&output=embed", "zones": [{"name": "Zone 1 - Play Space", "photos": ["", ""], "floorplan": "", "scope": ["Ensure game/content and touch screens are working", "Confirm sound is on and units are connected to internet", "Full clean and wipe-down of all surfaces", "Thoroughly clean all screens - especially edges, test touch capability", "Wipe down internals: media player, router, camera and all cables", "Clean out area between screens and shells", "Check all lighting items are working", "Check all sound items are working", "Review all fixings - is anything loose", "Complete final testing", "Confirm all items are online with TKM9 Service Desk before leaving"], "hasScreens": true, "hasSound": true, "hasLight": false, "soundItems": [], "lightItems": []}]}, "watergardens": {"name": "Watergardens Shopping Centre", "address": "Watergardens VIC", "contacts": [{"icon": "&#128274;", "label": "On Arrival", "text": "Report to Security - Location: Urban Precinct"}, {"icon": "&#128222;", "label": "TKM9 Service Desk", "text": "<a href=\"tel:0423700339\">0423 700 339</a>"}], "mapEmbed": "https://maps.google.com/maps?q=Watergardens+VIC&output=embed", "zones": [{"name": "Zone 1 - Play Space Area 1", "photos": ["", "", "", ""], "floorplan": "", "scope": ["Ensure game/content and touch screens are working", "Confirm sound is on and units are connected to internet", "Full clean and wipe-down of all surfaces", "Thoroughly clean all screens - especially edges, test touch capability", "Wipe down internals: media player, router, camera and all cables", "Clean out area between screens and shells", "Check all lighting items are working", "Check all sound items are working", "Review all fixings - is anything loose", "Complete final testing", "Confirm all items are online with TKM9 Service Desk before leaving"], "hasScreens": true, "hasSound": true, "hasLight": true, "soundItems": ["Kidszone/s"], "lightItems": ["Lightstrips"]}, {"name": "Zone 2 - Play Space Area 2", "photos": ["", "", "", ""], "floorplan": "", "scope": ["Ensure game/content and touch screens are working", "Confirm sound is on and units are connected to internet", "Full clean and wipe-down of all surfaces", "Thoroughly clean all screens - especially edges, test touch capability", "Wipe down internals: media player, router, camera and all cables", "Clean out area between screens and shells", "Check all lighting items are working", "Check all sound items are working", "Review all fixings - is anything loose", "Complete final testing", "Confirm all items are online with TKM9 Service Desk before leaving"], "hasScreens": true, "hasSound": true, "hasLight": false, "soundItems": [], "lightItems": []}, {"name": "Zone 3 - Play Space Area 3", "photos": ["", ""], "floorplan": "", "scope": ["Ensure game/content and touch screens are working", "Confirm sound is on and units are connected to internet", "Full clean and wipe-down of all surfaces", "Thoroughly clean all screens - especially edges, test touch capability", "Wipe down internals: media player, router, camera and all cables", "Clean out area between screens and shells", "Check all lighting items are working", "Check all sound items are working", "Review all fixings - is anything loose", "Complete final testing", "Confirm all items are online with TKM9 Service Desk before leaving"], "hasScreens": true, "hasSound": true, "hasLight": false, "soundItems": [], "lightItems": []}]}, "westernsydneyairport": {"name": "Western Sydney Airport", "address": "Western Sydney NSW", "contacts": [{"icon": "&#128274;", "label": "On Arrival", "text": "Report to Security - Play Space: East Pier, End of the Outback"}, {"icon": "&#128222;", "label": "TKM9 Service Desk", "text": "<a href=\"tel:0423700339\">0423 700 339</a>"}], "mapEmbed": "https://maps.google.com/maps?q=Western+Sydney+NSW&output=embed", "zones": [{"name": "Zone 1 - Play Space", "photos": ["", "", ""], "floorplan": "", "scope": ["Ensure game/content and touch screens are working", "Confirm sound is on and units are connected to internet", "Full clean and wipe-down of all surfaces", "Thoroughly clean all screens - especially edges, test touch capability", "Wipe down internals: media player, router, camera and all cables", "Clean out area between screens and shells", "Check all lighting items are working", "Check all sound items are working", "Review all fixings - is anything loose", "Complete final testing", "Confirm all items are online with TKM9 Service Desk before leaving"], "hasScreens": true, "hasSound": true, "hasLight": false, "soundItems": [], "lightItems": []}]}, "westfieldhornsby": {"name": "Westfield Hornsby", "address": "Hornsby NSW", "contacts": [{"icon": "&#128274;", "label": "On Arrival", "text": "Report to Security - Play Space: Level 3, Near Target"}, {"icon": "&#128222;", "label": "TKM9 Service Desk", "text": "<a href=\"tel:0423700339\">0423 700 339</a>"}], "mapEmbed": "https://maps.google.com/maps?q=Hornsby+NSW&output=embed", "zones": [{"name": "Zone 1 - Play Space Level 3 (Near Target)", "photos": [""], "floorplan": "", "scope": ["Ensure game/content and touch screens are working", "Confirm sound is on and units are connected to internet", "Full clean and wipe-down of all surfaces", "Thoroughly clean all screens - especially edges, test touch capability", "Wipe down internals: media player, router, camera and all cables", "Clean out area between screens and shells", "Check all lighting items are working", "Check all sound items are working", "Review all fixings - is anything loose", "Complete final testing", "Confirm all items are online with TKM9 Service Desk before leaving"], "hasScreens": true, "hasSound": true, "hasLight": false, "soundItems": [], "lightItems": []}]}, "westfieldhurstville": {"name": "Westfield Hurstville", "address": "Hurstville NSW", "contacts": [{"icon": "&#128274;", "label": "On Arrival", "text": "Report to Security - Play Area: Level 2, Outside Chit Warehouse"}, {"icon": "&#128222;", "label": "TKM9 Service Desk", "text": "<a href=\"tel:0423700339\">0423 700 339</a>"}], "mapEmbed": "https://maps.google.com/maps?q=Hurstville+NSW&output=embed", "zones": [{"name": "Zone 1 - Play Space Level 2", "photos": ["", ""], "floorplan": "", "scope": ["Ensure game/content and touch screens are working", "Confirm sound is on and units are connected to internet", "Full clean and wipe-down of all surfaces", "Thoroughly clean all screens - especially edges, test touch capability", "Wipe down internals: media player, router, camera and all cables", "Clean out area between screens and shells", "Check all lighting items are working", "Check all sound items are working", "Review all fixings - is anything loose", "Complete final testing", "Confirm all items are online with TKM9 Service Desk before leaving"], "hasScreens": true, "hasSound": true, "hasLight": false, "soundItems": [], "lightItems": []}]}, "westfieldkotara": {"name": "Westfield Kotara", "address": "Kotara NSW", "contacts": [{"icon": "&#128274;", "label": "On Arrival", "text": "Report to Security - Play Space: Near Target"}, {"icon": "&#128222;", "label": "TKM9 Service Desk", "text": "<a href=\"tel:0423700339\">0423 700 339</a>"}], "mapEmbed": "https://maps.google.com/maps?q=Kotara+NSW&output=embed", "zones": [{"name": "Zone 1 - Play Space (Near Target)", "photos": [""], "floorplan": "", "scope": ["Ensure game/content and touch screen are working", "Confirm sound is on and unit is connected to internet", "Full clean and wipe-down of all surfaces", "Thoroughly clean screen - especially edges, test touch capability", "Wipe down internals: media player, router, camera and cables", "Clean out area between screen and shell", "Complete final testing", "Confirm unit is online with TKM9 Service Desk before leaving"], "hasScreens": true, "hasSound": true, "hasLight": false, "soundItems": ["Single Sided Kidszone"], "lightItems": []}]}, "westfieldmiranda": {"name": "Westfield Miranda", "address": "600 Kingsway, Miranda NSW 2228", "contacts": [{"icon": "&#128274;", "label": "On Arrival", "text": "Report to Security Office [BEAKON] - down the corridor next to Lowes and Riot Art & Crafts. Location contact: <a href=\"tel:0408827556\">Pierce Thompson 0408 827 556</a>"}, {"icon": "&#128222;", "label": "TKM9 Service Desk", "text": "<a href=\"tel:0423700339\">0423 700 339</a>"}], "mapEmbed": "https://maps.google.com/maps?q=600+Kingsway,+Miranda+NSW+2228&output=embed", "zones": [{"name": "Zone 1 - Play Space Level 3 (Near Target)", "photos": [""], "floorplan": "", "scope": ["Ensure game/content and touch screens are working", "Confirm sound is on and units are connected to internet", "Full clean and wipe-down of all surfaces", "Thoroughly clean all screens - especially edges, test touch capability", "Wipe down internals: media player, router, camera and all cables", "Clean out area between screens and shells", "Check all lighting items are working", "Check all sound items are working", "Review all fixings - is anything loose", "Complete final testing", "Confirm all items are online with TKM9 Service Desk before leaving"], "hasScreens": true, "hasSound": true, "hasLight": false, "soundItems": [], "lightItems": []}, {"name": "Zone 2 - Pillars Level 3 (NOVO Shoes)", "photos": [""], "floorplan": "", "scope": ["Ensure game/content and touch screens are working", "Confirm sound is on and units are connected to internet", "Full clean and wipe-down of all surfaces", "Thoroughly clean all screens - especially edges, test touch capability", "Wipe down internals: media player, router, camera and all cables", "Clean out area between screens and shells", "Check all lighting items are working", "Check all sound items are working", "Review all fixings - is anything loose", "Complete final testing", "Confirm all items are online with TKM9 Service Desk before leaving"], "hasScreens": true, "hasSound": true, "hasLight": false, "soundItems": [], "lightItems": []}]}, "westfieldsouthland": {"name": "Westfield Southland (2 Single Kidszones)", "address": "1239 Nepean Highway, Cheltenham VIC 3192", "contacts": [{"icon": "&#128274;", "label": "On Arrival", "text": "Report to Security Office [BEAKON]. Location contact: <a href=\"tel:0488981694\">Kathryn Tyson 0488 981 694</a>"}, {"icon": "&#128222;", "label": "TKM9 Service Desk", "text": "<a href=\"tel:0423700339\">0423 700 339</a>"}], "mapEmbed": "https://maps.google.com/maps?q=1239+Nepean+Highway,+Cheltenham+VIC+3192&output=embed", "zones": [{"name": "Zone 1 - Playspace Outside Myer", "photos": [], "floorplan": "", "scope": ["Ensure game/content and touch screen are working", "Confirm sound is on and unit is connected to internet", "Full clean and wipe-down of all surfaces", "Thoroughly clean screen - especially edges, test touch capability", "Wipe down internals: media player, router, camera and cables", "Clean out area between screen and shell", "Complete final testing", "Confirm unit is online with TKM9 Service Desk before leaving"], "hasScreens": true, "hasSound": true, "hasLight": false, "soundItems": ["Single Sided Kidszone"], "lightItems": []}, {"name": "Zone 2 - Playspace (Space 2)", "photos": [], "floorplan": "", "scope": ["Ensure game/content and touch screen are working", "Confirm sound is on and unit is connected to internet", "Full clean and wipe-down of all surfaces", "Thoroughly clean screen - especially edges, test touch capability", "Wipe down internals: media player, router, camera and cables", "Clean out area between screen and shell", "Complete final testing", "Confirm unit is online with TKM9 Service Desk before leaving"], "hasScreens": true, "hasSound": true, "hasLight": false, "soundItems": ["Single Sided Kidszone"], "lightItems": []}]}};
+let SUBMISSIONS=[];
+try{SUBMISSIONS=JSON.parse(localStorage.getItem("tkm9_submissions")||"[]");}catch(e){}
+let adminLoggedIn=sessionStorage.getItem("tkm9_admin")==="1";
+let currentSubIdx=null;
+
+let S={};
+function initS(){S={screen:1,slug:"",client:null,techName:"",techMobile:"",serviceDate:"",serviceType:"",serviceTypes:[],calloutReason:"",calloutReporter:"",zoneData:{},photos:{},driveFolderUrl:"",overallNotes:"",followup:"",ack:false};}
+initS();
+
+document.addEventListener("DOMContentLoaded",()=>{
+  const p=new URLSearchParams(window.location.search);
+  if(p.has("admin")){
+    ["screen-1","bottom-nav","prog-bar","step-pill"].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display="none";});
+    document.getElementById("admin-wrap").style.display="block";
+    if(adminLoggedIn){document.getElementById("admin-login-view").style.display="none";document.getElementById("admin-main-view").style.display="block";renderClientList();showTab("clients");}
+    return;
+  }
+  const slug=(p.get("client")||"").toLowerCase().trim();
+  if(!slug||!CLIENTS[slug]){
+    ["screen-1","bottom-nav","prog-bar","step-pill"].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display="none";});
+    document.getElementById("invalid-screen").style.display="block";
+    return;
+  }
+  S.slug=slug;S.client=CLIENTS[slug];
+  const b=mkBanner(S.client);
+  document.getElementById("banner-1").innerHTML=b;
+  document.getElementById("banner-2").innerHTML=b;
+  document.getElementById("service-date").value=new Date().toISOString().split("T")[0];
+  document.querySelectorAll(".stb").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      const val=btn.dataset.val,isQ=val!=="CALLOUT";
+      if(isQ)document.querySelectorAll(".stb:not(.callout)").forEach(b=>{if(b!==btn)b.classList.remove("sel");});
+      btn.classList.toggle("sel");
+      document.getElementById("callout-extra").classList.toggle("show",!!document.querySelector(".stb.callout.sel"));
+      S.serviceTypes=[];document.querySelectorAll(".stb.sel").forEach(b=>S.serviceTypes.push(b.dataset.val));
+      S.serviceType=S.serviceTypes.join(" + ");
+    });
+  });
+  document.querySelectorAll(".yb[data-field]").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      const f=btn.dataset.field;
+      document.querySelectorAll(`.yb[data-field="${f}"]`).forEach(b=>b.classList.remove("on"));
+      btn.classList.add("on");
+      if(f==="followup")S.followup=btn.dataset.val;
+      if(f==="ack")S.ack=true;
+    });
+  });
+  updateNav();
+});
+
+function mkBanner(c){
+  const contacts=c.contacts.map(x=>`<div class="cc"><div class="cci">${x.icon}</div><div><div class="ccl">${x.label}</div><div class="cct">${x.text}</div></div></div>`).join("");
+  return `<div class="cbanner"><div class="bt"><div class="bn">${c.name}</div><div class="ba">&#128205; ${c.address}</div><div class="ccs">${contacts}</div></div><div class="bmap"><iframe src="${c.mapEmbed}" allowfullscreen loading="lazy"></iframe></div></div>`;
+}
+
+function buildZones(){
+  const con=document.getElementById("zones-container");con.innerHTML="";
+  S.client.zones.forEach((z,i)=>{
+    S.zoneData[z.id]=S.zoneData[z.id]||{completed:false};
+    S.photos[z.id]=S.photos[z.id]||[];
+    const w=document.createElement("div");w.className="zw";
+    w.innerHTML=`<div class="zh" id="zh-${z.id}" onclick="toggleZ('${z.id}')"><div class="znum" id="znum-${z.id}">${i+1}</div><div class="ztitle">${z.name}</div><div class="zbadge pend" id="zbadge-${z.id}">Pending</div><div class="zchev">&#8250;</div></div><div class="zb" id="zb-${z.id}">${mkZBody(z)}</div>`;
+    con.appendChild(w);
+    ["pi-cam-"+z.id,"pi-lib-"+z.id].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener("change",e=>handlePhotos(e,z.id));});
+  });
+}
+
+function mkZBody(z){
+  let h="";
+  if((z.photos&&z.photos.length>0)||z.floorplan){
+    h+='<div class="sh" style="margin-top:0">Reference</div>';
+    if(z.photos&&z.photos.length>0){
+      const cls=z.photos.length===1?"single":"multi";
+      h+=`<div class="zmedia-photos ${cls}">${z.photos.map(p=>`<img src="${p}" alt="">`).join("")}</div>`;
+    }
+    if(z.floorplan)h+=`<div class="zmedia-label">Location within centre</div><img class="zmedia-fp" src="${z.floorplan}" alt="Floor plan">`;
+  }
+  if(z.scope&&z.scope.length){h+='<div class="sh">Scope of Work</div><ul class="scope-list">';z.scope.forEach(s=>{h+=`<li><div class="sbullet"></div><span>${s}</span></li>`;});h+="</ul>";}
+  h+='<div class="coa-banner">&#9679; Condition on Arrival</div>';
+  h+=`<label>Overall Condition</label><div class="cr" id="cond-${z.id}"><button class="cb" data-val="Good" onclick="setCond('${z.id}','Good')">Good</button><button class="cb" data-val="Medium" onclick="setCond('${z.id}','Medium')">Medium</button><button class="cb" data-val="Poor" onclick="setCond('${z.id}','Poor')">Poor</button></div>`;
+  h+=`<div class="field"><label>Condition Comments (optional)</label><textarea id="cn-${z.id}" oninput="sf('${z.id}','condNote',this.value)"></textarea></div>`;
+  h+='<div class="sh">Photos &amp; Video — Before Service</div>';
+  h+=`<div class="pa-btns"><div class="pa-btn"><input type="file" id="pi-cam-${z.id}" accept="image/*,video/*" capture="environment" multiple>&#128247; Take Photo/Video</div><div class="pa-btn"><input type="file" id="pi-lib-${z.id}" accept="image/*,video/*" multiple>&#128248; From Library</div></div>`;
+  h+=`<div class="upload-prog" id="uprog-${z.id}"><div class="upload-prog-fill" id="uprog-fill-${z.id}" style="width:0%"></div></div>`;
+  h+=`<div class="pg" id="pg-${z.id}"></div>`;
+  h+='<div class="svc-banner">&#9874;&#65039; Service Checks</div>';
+  if(z.isProjection){h+=yn(z.id,"projOn","Projection on and aligned/mapped to canvas?");h+=yn(z.id,"motionOk","All 3 motion detection sensors working and calibrated?");h+=yn(z.id,"soundCalib","Sound working and calibrated as intended?");h+=yn(z.id,"equipClean","Equipment clean and clear of dust and debris?");}
+  if(z.isSpecial){h+='<div class="sh">LED Screen</div>';h+=yn(z.id,"deadPixels","Any damaged pixels on LED panels?");h+=yn(z.id,"colourOk","Colour and calibration correct?");h+=yn(z.id,"soundCalib2","Sound calibration correct?");h+='<div class="sh">Animal Tray</div>';h+=yn(z.id,"animalsWorking","All animals working with screen?");h+=yn(z.id,"animalsPresent","All animals (Qty: 5) present in tray?");}
+  if(z.isServerRoom){h+=yn(z.id,"airflow","Airflow and heat OK for all equipment?");h+=yn(z.id,"noClutter","Room clear of clutter?");h+=yn(z.id,"signalOk","Signal strength as intended?");}
+  if(z.hasScreens){h+='<div class="sh">Screen Checks</div>';h+=yn(z.id,"touchOk","Touch working on ALL areas of the game?");h+=yn(z.id,"cameraOk","Camera securely in place (if visible)?");}
+  if(!z.isServerRoom&&!z.isProjection){h+='<div class="sh">External — Safety &amp; Quality</div>';h+=yn(z.id,"cracks","Any visual cracks or damage?");h+=yn(z.id,"fixings","All fixings secure?");h+=yn(z.id,"ventBlocked","Any debris blocking ventilation holes?");h+=yn(z.id,"dirtyCorners","Any build-up or dirt in corners of screens?");h+='<div class="sh">Internal — Technical</div>';h+=yn(z.id,"hotItems","Any electrical items hot to touch? (LEDs, Media Players, Routers, Screens, Cabling)");h+=yn(z.id,"cablesOk","All cables securely in place?");h+=yn(z.id,"dustInternal","Dust or debris build-up internally?");}
+  if(z.hasSound&&z.soundItems&&z.soundItems.length){h+=`<div class="sh">Sound</div><div class="sbox">Items to check: <strong>${z.soundItems.join(", ")}</strong></div>`;h+=yn(z.id,"soundOk","Sound working on ALL items?");h+=yn(z.id,"volumeOk","Volume level adequate?");}
+  if(z.hasLight&&z.lightItems&&z.lightItems.length){h+=`<div class="sh">Lighting</div><div class="sbox">Items to check: <strong>${z.lightItems.join(", ")}</strong></div>`;h+=yn(z.id,"lightOk","Lighting working on ALL items?");}
+  h+=`<div class="sh">Zone Summary</div><div class="field"><label>Summary / Items to Flag</label><textarea id="zn-${z.id}" oninput="sf('${z.id}','zoneNote',this.value)"></textarea></div>`;
+  h+=`<button class="mdb" onclick="markDone('${z.id}')">Mark Zone Complete &#10003;</button>`;
+  return h;
+}
+
+function yn(zid,field,q){return `<div class="yw"><div class="yq">${q}</div><div class="yr"><button class="yb yes" id="yn-${zid}-${field}-y" onclick="setYN('${zid}','${field}','Yes')">Yes</button><button class="yb no" id="yn-${zid}-${field}-n" onclick="setYN('${zid}','${field}','No')">No</button></div></div>`;}
+function setYN(zid,field,val){S.zoneData[zid]=S.zoneData[zid]||{};S.zoneData[zid][field]=val;document.getElementById(`yn-${zid}-${field}-y`).classList.toggle("on",val==="Yes");document.getElementById(`yn-${zid}-${field}-n`).classList.toggle("on",val==="No");}
+function setCond(zid,val){S.zoneData[zid]=S.zoneData[zid]||{};S.zoneData[zid].condition=val;document.querySelectorAll(`#cond-${zid} .cb`).forEach(b=>b.classList.toggle("on",b.dataset.val===val));}
+function sf(zid,key,val){S.zoneData[zid]=S.zoneData[zid]||{};S.zoneData[zid][key]=val;}
+function markDone(zid){S.zoneData[zid].completed=true;const badge=document.getElementById("zbadge-"+zid),num=document.getElementById("znum-"+zid);if(badge){badge.textContent="Done";badge.className="zbadge done";}if(num)num.className="znum dn";document.getElementById("zh-"+zid).classList.remove("open");document.getElementById("zb-"+zid).classList.remove("open");}
+function toggleZ(zid){const h=document.getElementById("zh-"+zid),b=document.getElementById("zb-"+zid),was=b.classList.contains("open");document.querySelectorAll(".zb").forEach(x=>x.classList.remove("open"));document.querySelectorAll(".zh").forEach(x=>x.classList.remove("open"));if(!was){b.classList.add("open");h.classList.add("open");}}
+
+async function handlePhotos(e,zid){
+  const files=Array.from(e.target.files);
+  if(!files.length)return;
+  const prog=document.getElementById("uprog-"+zid);
+  const progFill=document.getElementById("uprog-fill-"+zid);
+  if(prog)prog.style.display="block";
+  let done=0;
+  for(const f of files){
+    const r=new FileReader();
+    await new Promise(res=>{r.onload=ev=>{
+      const item={data:ev.target.result,type:f.type,name:f.name,driveUrl:"",driveId:""};
+      S.photos[zid]=S.photos[zid]||[];
+      S.photos[zid].push(item);
+      renderGrid(zid);
+      done++;
+      if(progFill)progFill.style.width=(done/files.length*100)+"%";
+      res();
+    };r.readAsDataURL(f);});
+    // Upload to Drive in background
+    uploadToDrive(S.photos[zid][S.photos[zid].length-1],zid);
+  }
+  setTimeout(()=>{if(prog)prog.style.display="none";},1000);
+}
+
+async function uploadToDrive(item,zid){
+  if(!APPS_SCRIPT_URL||!item.data)return;
+  try{
+    if(!S.driveFolderId){
+      const subId="sub_"+Date.now()+"_"+S.slug;
+      const res=await fetch(APPS_SCRIPT_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"getUploadUrl",clientName:S.client.name,submissionId:subId})});
+      const data=await res.json();
+      if(data.status==="success"){S.driveFolderId=data.folderId;S.driveFolderUrl=data.folderUrl;}
+    }
+    if(!S.driveFolderId)return;
+    const b64=item.data.split(",")[1];
+    const res=await fetch(APPS_SCRIPT_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"uploadPhoto",folderId:S.driveFolderId,fileData:b64,mimeType:item.type||"image/jpeg",fileName:item.name||("photo_"+Date.now())})});
+    const data=await res.json();
+    if(data.status==="success"){item.driveUrl=data.fileUrl;item.driveId=data.fileId;item.thumbUrl=data.thumbnailUrl;}
+  }catch(err){console.log("Drive upload:",err);}
+}
+
+function renderGrid(zid){
+  const g=document.getElementById("pg-"+zid);if(!g)return;
+  g.innerHTML=(S.photos[zid]||[]).map((item,i)=>{
+    const src=item.data||item;
+    const isVid=item.type&&item.type.startsWith("video");
+    const thumb=item.thumbUrl?"":"";
+    return `<div class="pt">${isVid?`<video style="width:100%;height:100%;object-fit:cover"><source src="${src}"></video>`:`<img src="${src}" alt="">`}<button class="pdel" onclick="delPhoto('${zid}',${i})">&#215;</button></div>`;
+  }).join("");
+}
+function delPhoto(zid,i){S.photos[zid].splice(i,1);renderGrid(zid);}
+
+function goNext(){
+  if(S.screen===1){
+    S.techName=document.getElementById("tech-name").value.trim();
+    S.techMobile=document.getElementById("tech-mobile").value.trim();
+    S.serviceDate=document.getElementById("service-date").value;
+    S.calloutReason=document.getElementById("callout-reason").value;
+    S.calloutReporter=document.getElementById("callout-reporter").value;
+    if(!S.techName){alert("Please enter your name.");return;}
+    if(!S.serviceDate){alert("Please select a date.");return;}
+    if(!S.serviceType){alert("Please select a service type.");return;}
+    buildZones();goTo(2);
+  }else if(S.screen===2){buildReview();goTo(3);}
+  else if(S.screen===3){if(!S.ack){document.getElementById("ack-error").style.display="block";return;}submitReport();}
+}
+function goBack(){if(S.screen>1)goTo(S.screen-1);}
+function goTo(n){document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));document.getElementById("screen-"+n).classList.add("active");S.screen=n;document.getElementById("step-cur").textContent=Math.min(n,3);document.getElementById("prog").style.width=(Math.min(n,3)/3*100)+"%";updateNav();window.scrollTo(0,0);}
+function updateNav(){const n=S.screen,nav=document.getElementById("bottom-nav"),back=document.getElementById("btn-back"),next=document.getElementById("btn-next");if(n===4){nav.style.display="none";return;}nav.style.display="flex";back.style.display=n>1?"block":"none";if(n===3){next.textContent="Submit Report";next.className="btn bg2";}else{next.textContent="Continue";next.className="btn bp";}}
+
+function buildReview(){
+  const done=S.client.zones.filter(z=>S.zoneData[z.id]&&S.zoneData[z.id].completed).length;
+  const photos=Object.values(S.photos).flat().length;
+  const tagMap={"Q1: JAN-MAR":"tq1","Q2: APR-JUN":"tq2","Q3: JUL-SEP":"tq3","Q4: OCT-DEC":"tq4","CALLOUT":"tco"};
+  const tagHtml=S.serviceTypes.map(t=>`<span class="tag ${tagMap[t]||"tq1"}">${t}</span>`).join(" ");
+  document.getElementById("review-content").innerHTML=
+    `<div class="rr"><span class="rl2">Client</span><span class="rv">${S.client.name}</span></div>`+
+    `<div class="rr"><span class="rl2">Technician</span><span class="rv">${S.techName}${S.techMobile?" &middot; "+S.techMobile:""}</span></div>`+
+    `<div class="rr"><span class="rl2">Date</span><span class="rv">${S.serviceDate}</span></div>`+
+    `<div class="rr"><span class="rl2">Service Type</span><span class="rv">${tagHtml}</span></div>`+
+    (S.calloutReason?`<div class="rr"><span class="rl2">Callout</span><span class="rv">${S.calloutReason}</span></div>`:"")+
+    `<div class="rr"><span class="rl2">Zones Complete</span><span class="rv">${done} / ${S.client.zones.length}</span></div>`+
+    `<div class="rr"><span class="rl2">Photos</span><span class="rv">${photos} uploaded</span></div>`;
+}
+
+async function submitReport(){
+  const btn=document.getElementById("btn-next");btn.innerHTML='<span class="spin"></span>Submitting...';btn.disabled=true;
+  const sub={id:"sub_"+Date.now(),timestamp:new Date().toISOString(),clientSlug:S.slug,clientName:S.client.name,clientAddress:S.client.address,techName:S.techName,techMobile:S.techMobile,serviceDate:S.serviceDate,serviceType:S.serviceType,serviceTypes:S.serviceTypes,calloutReason:S.calloutReason,calloutReporter:S.calloutReporter,overallNotes:document.getElementById("overall-notes").value,followup:S.followup,zoneData:JSON.parse(JSON.stringify(S.zoneData)),photos:JSON.parse(JSON.stringify(S.photos)),photoCount:Object.values(S.photos).flat().length,driveFolderUrl:S.driveFolderUrl||""};
+  SUBMISSIONS.unshift(sub);
+  try{localStorage.setItem("tkm9_submissions",JSON.stringify(SUBMISSIONS));}catch(e){}
+  if(APPS_SCRIPT_URL){
+    try{
+      const payload={...sub,photos:undefined,zoneData:JSON.stringify(sub.zoneData),type:"submission"};
+      await fetch(APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+    }catch(e){}
+  }
+  showSuccess(sub);
+}
+
+function showSuccess(sub){
+  goTo(4);
+  const tagMap={"Q1: JAN-MAR":"tq1","Q2: APR-JUN":"tq2","Q3: JUL-SEP":"tq3","Q4: OCT-DEC":"tq4","CALLOUT":"tco"};
+  const tagHtml=(sub.serviceTypes||[sub.serviceType]).map(t=>`<span class="tag ${tagMap[t]||"tq1"}">${t}</span>`).join(" ");
+  document.getElementById("success-detail").innerHTML=
+    `<div class="rr"><span class="rl2">Client</span><span class="rv">${sub.clientName}</span></div>`+
+    `<div class="rr"><span class="rl2">Technician</span><span class="rv">${sub.techName}</span></div>`+
+    `<div class="rr"><span class="rl2">Service</span><span class="rv">${tagHtml}</span></div>`+
+    `<div class="rr"><span class="rl2">Submitted</span><span class="rv">${new Date(sub.timestamp).toLocaleString("en-AU")}</span></div>`+
+    `<div style="margin-top:12px;padding:10px 12px;background:var(--gl);border-radius:var(--rsm);font-size:13px;color:var(--grn)">&#10003; Report sent to TKM9 Service Desk${sub.driveFolderUrl?' &middot; <a href="'+sub.driveFolderUrl+'" target="_blank" style="color:var(--grn)">View photos in Drive</a>':""}</div>`;
+  document.getElementById("bottom-nav").style.display="none";
+}
+
+function hardReset(){
+  initS();S.slug=(new URLSearchParams(window.location.search).get("client")||"").toLowerCase().trim();S.client=CLIENTS[S.slug];
+  ["tech-name","tech-mobile","callout-reason","callout-reporter","overall-notes"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
+  document.getElementById("service-date").value=new Date().toISOString().split("T")[0];
+  document.getElementById("callout-extra").classList.remove("show");
+  document.querySelectorAll(".stb").forEach(b=>b.classList.remove("sel"));
+  document.querySelectorAll(".yb[data-field]").forEach(b=>b.classList.remove("on"));
+  document.getElementById("ack-error").style.display="none";
+  document.getElementById("zones-container").innerHTML="";
+  goTo(1);document.getElementById("bottom-nav").style.display="flex";updateNav();
+}
+
+// ADMIN
+function showTab(tab){
+  ["clients","submissions"].forEach(t=>{
+    document.getElementById("tab-"+t+"-content").style.display=t===tab?"block":"none";
+    document.getElementById("tab-"+t).classList.toggle("active",t===tab);
+  });
+  if(tab==="submissions")renderSubmissions();
+}
+function checkPW(){
+  if(document.getElementById("admin-pw").value===ADMIN_PASSWORD){
+    sessionStorage.setItem("tkm9_admin","1");adminLoggedIn=true;
+    document.getElementById("admin-login-view").style.display="none";
+    document.getElementById("admin-main-view").style.display="block";
+    renderClientList();showTab("clients");
+  }else{document.getElementById("pw-err").style.display="block";}
+}
+function renderClientList(){
+  const el=document.getElementById("client-list-admin");
+  const q=(document.getElementById("admin-search")?.value||"").toLowerCase();
+  const slugs=Object.keys(CLIENTS).filter(s=>!q||CLIENTS[s].name.toLowerCase().includes(q)||s.includes(q));
+  if(!slugs.length){el.innerHTML='<div style="color:var(--mut);font-size:14px;padding:12px 0">No clients found.</div>';return;}
+  el.innerHTML=slugs.map(s=>{
+    const c=CLIENTS[s],url=NETLIFY_URL+"/?client="+s;
+    return `<div class="cliitem" id="cli-${s}"><div class="cli-hdr" onclick="toggleCli('${s}')"><div><div class="cliname">${c.name}</div><span class="clislug">${s}</span></div><div class="cli-chev" id="cli-chev-${s}">&#8250;</div></div><div class="cli-detail" id="cli-det-${s}"><div class="cliurl">${url}</div><div class="cliacts"><button class="abtn ac" onclick="copyText('${url}')">Copy URL</button><button class="abtn ae" onclick="editClient('${s}')">Edit</button><button class="abtn acp" onclick="copyClient('${s}')">Copy</button><button class="abtn ad" onclick="showDeleteConfirm('${s}')">Delete</button></div><div id="del-${s}" class="del-confirm"><input type="text" placeholder="Type exact client name to confirm" id="del-inp-${s}"><div style="display:flex;gap:6px;margin-top:6px"><button class="abtn ad" onclick="confirmDelete('${s}')">Confirm Delete</button><button class="abtn ae" onclick="document.getElementById('del-${s}').style.display='none'">Cancel</button></div></div></div></div>`;
+  }).join("");
+}
+function toggleCli(s){
+  const det=document.getElementById("cli-det-"+s);
+  const chev=document.getElementById("cli-chev-"+s);
+  const open=det.classList.toggle("open");
+  chev.classList.toggle("open",open);
+}
+function showDeleteConfirm(s){document.getElementById("del-"+s).style.display="block";}
+function confirmDelete(s){
+  if(document.getElementById("del-inp-"+s).value.trim()===CLIENTS[s].name){
+    delete CLIENTS[s];renderClientList();showToast("Client deleted");document.getElementById("dl-section").style.display="block";
+  }else{alert("Name doesn't match. Type exactly: "+CLIENTS[s].name);}
+}
+function copyClient(s){
+  const ns=s+"copy";CLIENTS[ns]=JSON.parse(JSON.stringify(CLIENTS[s]));CLIENTS[ns].name+=" (Copy)";
+  renderClientList();showToast("Copied!");document.getElementById("dl-section").style.display="block";editClient(ns);
+}
+let editingSlug=null,adminZones=[];
+function startNewClient(){
+  editingSlug=null;
+  adminZones=[{id:"z1",name:"",photos:[],floorplan:"",scope:[""],hasScreens:true,hasSound:true,hasLight:false,soundItems:[],lightItems:[]}];
+  ["e-name","e-addr","e-arrival","e-mobile"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("e-slug").value="";document.getElementById("e-slug").disabled=false;
+  document.getElementById("editor-heading").textContent="New Client";
+  document.getElementById("url-preview").textContent="Enter slug above";
+  renderZoneEditor();openModal();
+}
+function editClient(s){
+  editingSlug=s;const c=CLIENTS[s];adminZones=JSON.parse(JSON.stringify(c.zones));
+  document.getElementById("e-name").value=c.name;
+  document.getElementById("e-slug").value=s;document.getElementById("e-slug").disabled=true;
+  document.getElementById("e-addr").value=c.address;
+  document.getElementById("e-arrival").value=c.contacts[0]?c.contacts[0].text.replace(/<[^>]+>/g,""):"";
+  document.getElementById("e-mobile").value=c.contacts[1]?c.contacts[1].text.replace(/<[^>]+>/g,""):"";
+  document.getElementById("editor-heading").textContent="Edit: "+c.name;
+  updateSlugPreview();renderZoneEditor();openModal();
+}
+function openModal(){document.getElementById("editor-modal").classList.add("open");document.body.style.overflow="hidden";}
+function closeModal(){document.getElementById("editor-modal").classList.remove("open");document.body.style.overflow="";}
+function slugify(){const inp=document.getElementById("e-slug");inp.value=inp.value.toLowerCase().replace(/[^a-z0-9]/g,"");updateSlugPreview();}
+function updateSlugPreview(){const s=document.getElementById("e-slug").value;document.getElementById("url-preview").textContent=s?NETLIFY_URL+"/?client="+s:"Enter slug above";}
+function copyURL(){const s=document.getElementById("e-slug").value;if(s)copyText(NETLIFY_URL+"/?client="+s);}
+function copyText(t){navigator.clipboard.writeText(t).then(()=>showToast("URL copied!")).catch(()=>{const el=document.createElement("textarea");el.value=t;document.body.appendChild(el);el.select();document.execCommand("copy");document.body.removeChild(el);showToast("URL copied!");
+});}
+function showToast(m){const t=document.getElementById("toast");t.textContent=m;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2200);}
+function renderZoneEditor(){
+  const el=document.getElementById("zones-editor-wrap");
+  el.innerHTML=adminZones.map((z,i)=>{
+    const scopeInputs=z.scope.map((s,si)=>`<div class="sirow"><input type="text" value="${esc(s)}" oninput="adminZones[${i}].scope[${si}]=this.value"><button class="sirm" onclick="rmScope(${i},${si})">&#215;</button></div>`).join("");
+    const thumbs=(z.photos||[]).filter(p=>p).map((p,pi)=>{
+      const isDrive=p.startsWith("http");
+      const badge=isDrive?'<div style="position:absolute;bottom:2px;left:2px;background:#0a0;color:#fff;font-size:8px;padding:1px 4px;border-radius:3px;font-weight:700">DRIVE</div>':'<div style="position:absolute;bottom:2px;left:2px;background:#c80;color:#fff;font-size:8px;padding:1px 4px;border-radius:3px;font-weight:700">LOCAL</div>';
+      return `<div class="zphumb-item" style="position:relative"><img src="${p}">${badge}<button class="zphumb-del" onclick="rmZonePhoto(${i},${pi})">&#215;</button></div>`;
+    }).join("");
+    const fpSrc=z.floorplan||"";
+    const fpIsDrive=fpSrc.startsWith("http");
+    return `<div class="ze"><button class="zrmbtn" onclick="rmZone(${i})">Remove</button><h4>Zone ${i+1}</h4><div class="field"><label>Zone Name</label><input type="text" value="${esc(z.name)}" oninput="adminZones[${i}].name=this.value"></div><div class="field"><label>Reference Photos <span style="font-size:10px;color:var(--grn);font-weight:400;text-transform:none">&#9679; Upload → auto-saved to Google Drive</span></label><div class="zpuarea"><input type="file" accept="image/*" multiple onchange="handleAdminPhoto(event,${i})">&#128247; Upload zone photos</div>${thumbs?'<div class="zphumb">'+thumbs+"</div>":""}</div><div class="field"><label>Floor Plan / Location Map</label><div class="zpuarea"><input type="file" accept="image/*" onchange="handleAdminFP(event,${i})">&#128247; Upload floor plan</div>${fpSrc?`<div style="position:relative;display:inline-block;margin-top:6px"><img src="${fpSrc}" style="width:100%;max-height:70px;object-fit:contain;border-radius:6px"><div style="position:absolute;bottom:2px;left:2px;background:${fpIsDrive?"#0a0":"#c80"};color:#fff;font-size:8px;padding:1px 4px;border-radius:3px;font-weight:700">${fpIsDrive?"DRIVE":"LOCAL"}</div></div><br><button onclick="adminZones[${i}].floorplan='';renderZoneEditor()" style="font-size:11px;color:var(--red);background:none;border:none;cursor:pointer;margin-top:4px">Remove</button>`:""}</div><div class="field"><label>Scope Items</label>${scopeInputs}<button class="addsi" onclick="addScope(${i})">+ Add</button></div><div class="field"><label>Equipment</label><div class="cbrow"><label><input type="checkbox" ${z.hasScreens?"checked":""} onchange="adminZones[${i}].hasScreens=this.checked"> Screens</label><label><input type="checkbox" ${z.hasSound?"checked":""} onchange="adminZones[${i}].hasSound=this.checked"> Sound</label><label><input type="checkbox" ${z.hasLight?"checked":""} onchange="adminZones[${i}].hasLight=this.checked"> Lighting</label></div></div><div class="field"><label>Sound Items</label><input type="text" value="${(z.soundItems||[]).join(", ")}" oninput="adminZones[${i}].soundItems=this.value.split(',').map(s=>s.trim()).filter(Boolean)"></div><div class="field"><label>Light Items</label><input type="text" value="${(z.lightItems||[]).join(", ")}" oninput="adminZones[${i}].lightItems=this.value.split(',').map(s=>s.trim()).filter(Boolean)"></div></div>`;
+  }).join("");
+}
+async function uploadAdminPhotoToDrive(file, label){
+  // Returns a Drive URL string, or falls back to base64 if Drive unavailable
+  if(!APPS_SCRIPT_URL) return null;
+  try{
+    const b64 = await new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result.split(",")[1]);r.onerror=rej;r.readAsDataURL(file);});
+    const resp = await fetch(APPS_SCRIPT_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"uploadZoneRef",fileData:b64,mimeType:file.type||"image/jpeg",fileName:label+"_"+file.name})});
+    const data = await resp.json();
+    if(data.status==="success" && data.fileUrl) return data.fileUrl;
+  }catch(err){console.log("Admin Drive upload error:",err);}
+  return null;
+}
+
+async function handleAdminPhoto(e,i){
+  const files=Array.from(e.target.files);
+  if(!files.length)return;
+  const zoneName=adminZones[i].name||("Zone "+(i+1));
+  // Show uploading indicator
+  showToast("Uploading "+files.length+" photo"+(files.length>1?"s":"")+"...");
+  adminZones[i].photos=adminZones[i].photos||[];
+  for(const f of files){
+    const url = await uploadAdminPhotoToDrive(f, zoneName);
+    if(url){
+      adminZones[i].photos.push(url);
+    } else {
+      // Fallback: store as base64 (will bloat file but better than losing photo)
+      const b64 = await new Promise(res=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.readAsDataURL(f);});
+      adminZones[i].photos.push(b64);
+      showToast("⚠ Drive unavailable — photo stored locally");
+    }
+  }
+  renderZoneEditor();
+  showToast("✓ "+files.length+" photo"+(files.length>1?"s":"")+" uploaded");
+}
+
+async function handleAdminFP(e,i){
+  const f=e.target.files[0];if(!f)return;
+  const zoneName=adminZones[i].name||("Zone "+(i+1));
+  showToast("Uploading floor plan...");
+  const url = await uploadAdminPhotoToDrive(f, zoneName+"_floorplan");
+  if(url){
+    adminZones[i].floorplan=url;
+    showToast("✓ Floor plan uploaded");
+  } else {
+    // Fallback to base64
+    const b64 = await new Promise(res=>{const r=new FileReader();r.onload=ev=>res(ev.target.result);r.readAsDataURL(f);});
+    adminZones[i].floorplan=b64;
+    showToast("⚠ Drive unavailable — stored locally");
+  }
+  renderZoneEditor();
+}
+function rmZonePhoto(i,pi){adminZones[i].photos.splice(pi,1);renderZoneEditor();}
+function addScope(i){adminZones[i].scope.push("");renderZoneEditor();}
+function rmScope(i,si){adminZones[i].scope.splice(si,1);renderZoneEditor();}
+function adminAddZone(){adminZones.push({id:"z"+(adminZones.length+1),name:"",photos:[],floorplan:"",scope:[""],hasScreens:true,hasSound:true,hasLight:false,soundItems:[],lightItems:[]});renderZoneEditor();}
+function rmZone(i){if(adminZones.length>1){adminZones.splice(i,1);renderZoneEditor();}}
+function adminSaveClient(){
+  const name=document.getElementById("e-name").value.trim();
+  const slug=editingSlug||document.getElementById("e-slug").value.toLowerCase().replace(/[^a-z0-9]/g,"");
+  const addr=document.getElementById("e-addr").value.trim();
+  const arrival=document.getElementById("e-arrival").value.trim();
+  const mobile=document.getElementById("e-mobile").value.trim();
+  if(!name||!slug||!addr){alert("Please fill in name, slug and address.");return;}
+  if(!editingSlug&&CLIENTS[slug]){alert("Slug already exists.");return;}
+  const mobHtml=mobile?(mobile.includes("@")?`<a href="mailto:${mobile}">${mobile}</a>`:`<a href="tel:${mobile.replace(/\s/g,"")}">${mobile}</a>`):"";
+  CLIENTS[slug]={name,address:addr,contacts:[{icon:"&#128274;",label:"On Arrival",text:arrival||"Report to reception"},{icon:"&#128222;",label:"TKM9 Service Desk",text:mobHtml}],mapEmbed:`https://maps.google.com/maps?q=${encodeURIComponent(addr)}&output=embed`,zones:adminZones.map((z,i)=>Object.assign({},z,{id:z.id||"z"+(i+1),name:z.name||"Zone "+(i+1),scope:z.scope.filter(s=>s.trim())}))};
+  closeModal();renderClientList();document.getElementById("dl-section").style.display="block";showToast("Client saved!");
+}
+
+// SUBMISSIONS
+function renderSubmissions(){
+  try{SUBMISSIONS=JSON.parse(localStorage.getItem("tkm9_submissions")||"[]");}catch(e){}
+  const el=document.getElementById("submissions-list");
+  if(!SUBMISSIONS.length){el.innerHTML='<div style="color:var(--mut);font-size:14px;padding:12px 0">No submissions on this device yet. Reports saved cross-device via Google Sheets.</div>';return;}
+  el.innerHTML=SUBMISSIONS.map((s,i)=>{
+    const d=new Date(s.timestamp);
+    const tagMap={"Q1: JAN-MAR":"tq1","Q2: APR-JUN":"tq2","Q3: JUL-SEP":"tq3","Q4: OCT-DEC":"tq4","CALLOUT":"tco"};
+    const tags=(s.serviceTypes||[s.serviceType]).map(t=>`<span class="tag ${tagMap[t]||"tq1"}">${t}</span>`).join(" ");
+    return `<div class="sub-item" onclick="viewSubmission(${i})"><strong>${s.clientName}</strong> &mdash; ${tags}<div class="sub-meta">${s.techName} &middot; ${d.toLocaleDateString("en-AU")} ${d.toLocaleTimeString("en-AU",{hour:"2-digit",minute:"2-digit"})}</div></div>`;
+  }).join("");
+}
+function showSubsList(){document.getElementById("subs-list-panel").style.display="block";document.getElementById("sub-detail-panel").style.display="none";document.getElementById("sub-edit-panel").style.display="none";}
+function viewSubmission(i){
+  currentSubIdx=i;const s=SUBMISSIONS[i];
+  document.getElementById("sub-detail-title").textContent=s.clientName+" — "+s.serviceType;
+  const tagMap={"Q1: JAN-MAR":"tq1","Q2: APR-JUN":"tq2","Q3: JUL-SEP":"tq3","Q4: OCT-DEC":"tq4","CALLOUT":"tco"};
+  const tags=(s.serviceTypes||[s.serviceType]).map(t=>`<span class="tag ${tagMap[t]||"tq1"}">${t}</span>`).join(" ");
+  let html=`<div class="rr"><span class="rl2">Client</span><span class="rv">${s.clientName}</span></div>`+
+    `<div class="rr"><span class="rl2">Address</span><span class="rv">${s.clientAddress||""}</span></div>`+
+    `<div class="rr"><span class="rl2">Technician</span><span class="rv">${s.techName}${s.techMobile?" &middot; "+s.techMobile:""}</span></div>`+
+    `<div class="rr"><span class="rl2">Date</span><span class="rv">${s.serviceDate}</span></div>`+
+    `<div class="rr"><span class="rl2">Service Type</span><span class="rv">${tags}</span></div>`+
+    (s.calloutReason?`<div class="rr"><span class="rl2">Callout</span><span class="rv">${s.calloutReason}</span></div>`:"")+
+    `<div class="rr"><span class="rl2">Follow-up</span><span class="rv">${s.followup||"-"}</span></div>`+
+    (s.overallNotes?`<div class="rr"><span class="rl2">Notes</span><span class="rv">${s.overallNotes}</span></div>`:"");
+  if(s.driveFolderUrl)html+=`<div class="rr"><span class="rl2">Drive Photos</span><span class="rv"><a href="${s.driveFolderUrl}" target="_blank" style="color:var(--blue)">View in Drive &#8599;</a></span></div>`;
+  if(s.zoneData){Object.entries(s.zoneData).forEach(([zid,z])=>{
+    const znum=zid.replace("z","");
+    const client=CLIENTS[s.clientSlug];
+    const zoneName=client?.zones?.find(z2=>z2.id===zid)?.name||"Zone "+znum;
+    html+=`<hr style="border-color:var(--bor);margin:10px 0"><div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--blue);margin-bottom:8px">${zoneName}</div>`;
+    html+=`<div style="background:#0e0e22;color:#fff;padding:6px 10px;border-radius:6px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Condition on Arrival</div>`;
+    if(z.condition)html+=`<div class="rr"><span class="rl2">Condition</span><span class="rv">${z.condition}</span></div>`;
+    if(z.condNote)html+=`<div class="rr"><span class="rl2">Notes</span><span class="rv">${z.condNote}</span></div>`;
+    html+=`<div style="background:#1a1aff;color:#fff;padding:6px 10px;border-radius:6px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;margin:8px 0">Service Checks</div>`;
+    const checks={"touchOk":"Touch","cameraOk":"Camera","cracks":"Cracks/Damage","fixings":"Fixings Secure","ventBlocked":"Ventilation","dirtyCorners":"Screen Corners","hotItems":"Hot Items","cablesOk":"Cables OK","dustInternal":"Internal Dust","soundOk":"Sound","volumeOk":"Volume","lightOk":"Lighting","projOn":"Projection","motionOk":"Motion Sensors","soundCalib":"Sound Calibrated","equipClean":"Equipment Clean","airflow":"Airflow","noClutter":"No Clutter","signalOk":"Signal"};
+    Object.entries(checks).forEach(([k,label])=>{if(z[k])html+=`<div class="rr"><span class="rl2">${label}</span><span class="rv" style="color:${z[k]==="Yes"?"var(--grn)":z[k]==="No"?"var(--red)":"inherit"}">${z[k]}</span></div>`;});
+    if(z.zoneNote)html+=`<div class="rr"><span class="rl2">Summary</span><span class="rv">${z.zoneNote}</span></div>`;
+  });}
+  // Show photos
+  if(s.photos){
+    Object.entries(s.photos).forEach(([zid,photos])=>{
+      const arr=Array.isArray(photos)?photos:[];
+      if(arr.length){
+        html+=`<hr style="border-color:var(--bor);margin:10px 0"><div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--blue);margin-bottom:8px">Zone ${zid.replace("z","")} Photos</div><div style="display:flex;flex-wrap:wrap;gap:6px">`;
+        arr.forEach(p=>{
+          const src=typeof p==="string"?p:p.data;
+          const isVid=typeof p==="object"&&p.type&&p.type.startsWith("video");
+          const driveUrl=typeof p==="object"&&p.driveUrl?p.driveUrl:"";
+          if(driveUrl){html+=`<a href="${driveUrl}" target="_blank"><img src="${typeof p==="object"&&p.thumbUrl?p.thumbUrl:src}" style="width:80px;height:60px;object-fit:cover;border-radius:6px;cursor:pointer"></a>`;}
+          else if(isVid){html+=`<a href="${src}" target="_blank" style="display:flex;align-items:center;justify-content:center;width:80px;height:60px;background:var(--su2);border-radius:6px;color:var(--blue);font-size:11px;font-weight:600;text-decoration:none">&#9654; Video</a>`;}
+          else{html+=`<img src="${src}" style="width:80px;height:60px;object-fit:cover;border-radius:6px">`;}
+        });
+        html+="</div>";
+      }
+    });
+  }
+  document.getElementById("sub-detail-content").innerHTML=html;
+  document.getElementById("subs-list-panel").style.display="none";
+  document.getElementById("sub-detail-panel").style.display="block";
+}
+function editSubmission(){
+  if(currentSubIdx===null)return;
+  const s=SUBMISSIONS[currentSubIdx];
+  let html=`<div class="fgrid"><div class="field"><label>Technician Name</label><input type="text" id="edit-techName" value="${esc(s.techName||"")}"></div><div class="field"><label>Mobile</label><input type="text" id="edit-techMobile" value="${esc(s.techMobile||"")}"></div></div>`;
+  html+=`<div class="fgrid"><div class="field"><label>Service Date</label><input type="date" id="edit-serviceDate" value="${s.serviceDate||""}"></div><div class="field"><label>Follow-up Required</label><select id="edit-followup"><option value="">-</option><option value="Yes" ${s.followup==="Yes"?"selected":""}>Yes</option><option value="No" ${s.followup==="No"?"selected":""}>No</option></select></div></div>`;
+  html+=`<div class="field"><label>Overall Notes</label><textarea id="edit-overallNotes">${esc(s.overallNotes||"")}</textarea></div>`;
+  if(s.zoneData){Object.entries(s.zoneData).forEach(([zid,z])=>{
+    const znum=zid.replace("z","");
+    html+=`<div style="background:var(--su2);border-radius:var(--rsm);padding:12px;margin-bottom:10px"><div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--blue);margin-bottom:8px">Zone ${znum}</div>`;
+    html+=`<div class="field"><label>Condition on Arrival</label><select id="edit-cond-${zid}"><option value="">-</option><option value="Good" ${z.condition==="Good"?"selected":""}>Good</option><option value="Medium" ${z.condition==="Medium"?"selected":""}>Medium</option><option value="Poor" ${z.condition==="Poor"?"selected":""}>Poor</option></select></div>`;
+    html+=`<div class="field"><label>Condition Notes</label><input type="text" id="edit-condNote-${zid}" value="${esc(z.condNote||"")}"></div>`;
+    html+=`<div class="field"><label>Zone Summary</label><textarea id="edit-zoneNote-${zid}">${esc(z.zoneNote||"")}</textarea></div></div>`;
+  });}
+  document.getElementById("sub-edit-content").innerHTML=html;
+  document.getElementById("sub-detail-panel").style.display="none";
+  document.getElementById("sub-edit-panel").style.display="block";
+}
+function saveSubEdit(){
+  if(currentSubIdx===null)return;
+  const s=SUBMISSIONS[currentSubIdx];
+  s.techName=document.getElementById("edit-techName").value;
+  s.techMobile=document.getElementById("edit-techMobile").value;
+  s.serviceDate=document.getElementById("edit-serviceDate").value;
+  s.followup=document.getElementById("edit-followup").value;
+  s.overallNotes=document.getElementById("edit-overallNotes").value;
+  if(s.zoneData){Object.keys(s.zoneData).forEach(zid=>{
+    const condEl=document.getElementById("edit-cond-"+zid);
+    const condNoteEl=document.getElementById("edit-condNote-"+zid);
+    const zoneNoteEl=document.getElementById("edit-zoneNote-"+zid);
+    if(condEl)s.zoneData[zid].condition=condEl.value;
+    if(condNoteEl)s.zoneData[zid].condNote=condNoteEl.value;
+    if(zoneNoteEl)s.zoneData[zid].zoneNote=zoneNoteEl.value;
+  });}
+  try{localStorage.setItem("tkm9_submissions",JSON.stringify(SUBMISSIONS));}catch(e){}
+  showToast("Report updated!");
+  cancelSubEdit();
+  viewSubmission(currentSubIdx);
+}
+function cancelSubEdit(){document.getElementById("sub-edit-panel").style.display="none";document.getElementById("sub-detail-panel").style.display="block";}
+
+function downloadSubPDF(){
+  if(currentSubIdx===null)return;
+  const s=SUBMISSIONS[currentSubIdx];
+  const client=CLIENTS[s.clientSlug];
+  const now=new Date();
+  const dateStr=s.serviceDate?s.serviceDate.replace(/-/g,""):"";
+  const typeStr=s.serviceType?s.serviceType.replace(/[^A-Z0-9]/gi,"_"):"";
+  const filename=`SERVICE_${(s.clientName||"").replace(/[^a-z0-9]/gi,"_")}_${typeStr}_${dateStr}.pdf`;
+  const tagMap={"Q1: JAN-MAR":"#eeeeff","Q2: APR-JUN":"#e6f7ef","Q3: JUL-SEP":"#fff3e0","Q4: OCT-DEC":"#f3eeff","CALLOUT":"#ffebee"};
+  const tagColorText={"Q1: JAN-MAR":"#1a1aff","Q2: APR-JUN":"#00a550","Q3: JUL-SEP":"#d97000","Q4: OCT-DEC":"#7744cc","CALLOUT":"#cc2233"};
+  const tags=(s.serviceTypes||[s.serviceType]).map(t=>`<span style="background:${tagMap[t]||"#eee"};color:${tagColorText[t]||"#333"};padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;font-family:monospace;text-transform:uppercase;margin-right:4px">${t}</span>`).join("");
+  let zonesHtml="";
+  if(s.zoneData){
+    Object.entries(s.zoneData).forEach(([zid,z])=>{
+      const znum=zid.replace("z","");
+      const zoneName=client?.zones?.find(z2=>z2.id===zid)?.name||"Zone "+znum;
+      const zoneData=client?.zones?.find(z2=>z2.id===zid);
+      let refPhotos="";
+      if(zoneData?.photos?.length){
+        refPhotos='<div style="margin-bottom:12px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#888;margin-bottom:6px">Zone Reference</div><div style="display:flex;gap:8px;flex-wrap:wrap">';
+        zoneData.photos.forEach(p=>{refPhotos+=`<img src="${p}" style="height:100px;border-radius:6px;object-fit:cover">`;}); 
+        refPhotos+="</div></div>";
+      }
+      if(zoneData?.floorplan)refPhotos+=`<div style="margin-bottom:12px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#888;margin-bottom:6px">Location Map</div><img src="${zoneData.floorplan}" style="max-height:120px;border-radius:6px;object-fit:contain;background:#f0f1f6;padding:4px"></div>`;
+      const checks={"touchOk":"Touch Working","cameraOk":"Camera Secure","cracks":"Visual Cracks/Damage","fixings":"All Fixings Secure","ventBlocked":"Ventilation Clear","dirtyCorners":"Screen Corners Clean","hotItems":"No Hot Items","cablesOk":"All Cables Secure","dustInternal":"No Internal Dust","soundOk":"Sound Working","volumeOk":"Volume Adequate","lightOk":"Lighting Working","projOn":"Projection Aligned","motionOk":"Motion Sensors OK","soundCalib":"Sound Calibrated","equipClean":"Equipment Clean","airflow":"Airflow OK","noClutter":"No Clutter","signalOk":"Signal OK"};
+      let checksHtml='<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px">';
+      let hasChecks=false;
+      Object.entries(checks).forEach(([k,label])=>{
+        if(z[k]){hasChecks=true;checksHtml+=`<tr><td style="padding:4px 6px;border-bottom:1px solid #f0f0f0;color:#555">${label}</td><td style="padding:4px 6px;border-bottom:1px solid #f0f0f0;font-weight:700;color:${z[k]==="Yes"?"#00a550":"#cc2233"};text-align:right">${z[k]}</td></tr>`;}
+      });
+      checksHtml+="</table>";
+      let photoHtml="";
+      if(s.photos&&s.photos[zid]){
+        const arr=Array.isArray(s.photos[zid])?s.photos[zid]:[];
+        if(arr.length){
+          photoHtml='<div style="margin-top:10px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#888;margin-bottom:6px">Service Photos ('+(arr.length)+')</div><div style="display:flex;gap:8px;flex-wrap:wrap">';
+          arr.forEach(p=>{
+            const src=typeof p==="string"?p:p.data;
+            const isVid=typeof p==="object"&&p.type&&p.type.startsWith("video");
+            const driveUrl=typeof p==="object"&&p.driveUrl;
+            if(isVid&&driveUrl){photoHtml+=`<a href="${driveUrl}" style="display:flex;align-items:center;justify-content:center;width:100px;height:80px;background:#f0f1f6;border-radius:6px;color:#1a1aff;font-size:11px;font-weight:600;text-decoration:none;border:1px solid #dde0ec">&#9654; Video</a>`;}
+            else if(isVid){photoHtml+=`<div style="display:flex;align-items:center;justify-content:center;width:100px;height:80px;background:#f0f1f6;border-radius:6px;color:#888;font-size:11px">Video</div>`;}
+            else{photoHtml+=`<img src="${src}" style="width:100px;height:80px;object-fit:cover;border-radius:6px">`;}
+          });
+          photoHtml+="</div></div>";
+        }
+      }
+      zonesHtml+=`<div style="margin-bottom:20px;border:1px solid #dde0ec;border-radius:10px;overflow:hidden"><div style="background:#12122a;color:#fff;padding:12px 16px;font-weight:700;font-size:14px">${zoneName}</div><div style="padding:16px">${refPhotos}<div style="background:#0e0e22;color:#fff;padding:8px 12px;border-radius:6px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">&#9679; Condition on Arrival</div><p style="font-size:13px;margin-bottom:4px"><strong>Condition:</strong> <span style="color:${z.condition==="Good"?"#00a550":z.condition==="Poor"?"#cc2233":"#d97000"};font-weight:700">${z.condition||"-"}</span></p>${z.condNote?'<p style="font-size:13px;margin-bottom:10px;color:#555">'+z.condNote+"</p>":""}<div style="background:#1a1aff;color:#fff;padding:8px 12px;border-radius:6px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;margin:10px 0 8px">&#9874; Service Checks</div>${hasChecks?checksHtml:"<p style='font-size:12px;color:#888'>No checks recorded</p>"}</div>${z.zoneNote?'<div style="padding:0 16px 16px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#888;margin-bottom:4px">Zone Summary</div><p style="font-size:13px;color:#333">'+z.zoneNote+"</p></div>":""}</div>${photoHtml?'<div style="padding:0 16px 16px">'+photoHtml+'</div>':""}</div>`;
+    });
+  }
+  const win=window.open("","_blank");
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${filename}</title><style>body{font-family:Arial,sans-serif;font-size:13px;color:#12122a;max-width:740px;margin:0 auto;padding:28px}p{margin:3px 0}@media print{.no-print{display:none}body{padding:12px}}</style></head><body>`+
+    `<div style="text-align:center;margin-bottom:24px;border-bottom:3px solid #1a1aff;padding-bottom:16px"><img src="${LOGO_SRC}" style="height:52px;background:transparent"></div>`+
+    `<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px"><div><h1 style="font-size:22px;font-weight:700;margin-bottom:4px">${s.clientName}</h1><p style="color:#6b6f8a;font-size:13px">&#128205; ${s.clientAddress}</p></div><div style="text-align:right">${tags}</div></div>`+
+    `<div style="background:#f0f1f6;border-radius:10px;padding:14px 18px;margin-bottom:20px;display:grid;grid-template-columns:1fr 1fr;gap:8px"><div><p><strong>Technician:</strong> ${s.techName}${s.techMobile?" &middot; "+s.techMobile:""}</p><p><strong>Service Date:</strong> ${s.serviceDate}</p></div><div><p><strong>Follow-up Required:</strong> ${s.followup||"-"}</p>${s.calloutReason?'<p><strong>Callout:</strong> '+s.calloutReason+"</p>":""}</div></div>`+
+    (s.overallNotes?`<div style="border-left:3px solid #1a1aff;padding:10px 14px;margin-bottom:20px;background:#f8f8ff;border-radius:0 8px 8px 0"><strong>Overall Notes:</strong><br>${s.overallNotes}</div>`:"")+
+    zonesHtml+
+    `<div style="margin-top:20px;padding-top:12px;border-top:1px solid #dde0ec;display:flex;justify-content:space-between;align-items:center"><p style="font-size:11px;color:#888">Downloaded: ${now.toLocaleString("en-AU")}</p><p style="font-size:11px;color:#888">TKM9 Service &amp; Support Desk</p></div>`+
+    `<div class="no-print" style="margin-top:16px;text-align:center"><button onclick="window.print();setTimeout(()=>window.close(),500)" style="padding:12px 28px;background:#1a1aff;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:15px;font-weight:700">&#128424; Save as PDF</button></div>`+
+    `</body></html>`);
+  win.document.close();
+  win.document.title=filename;
+}
+
+function exitAdmin(){window.location.href=window.location.pathname;}
+function esc(s){return(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+function downloadFile(){
+  const html=doc
