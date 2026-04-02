@@ -918,4 +918,15 @@ function downloadSubPDF(){
 function exitAdmin(){window.location.href=window.location.pathname;}
 function esc(s){return(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
 function downloadFile(){
-  cons
+    // Download function - regenerates index.html with current client data
+  const blob = new Blob([document.documentElement.outerHTML], {type: 'text/html'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'index.html';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
