@@ -756,30 +756,28 @@ function renderSubmissions(){
   try{SUBMISSIONS=JSON.parse(localStorage.getItem("tkm9_submissions")||"[]");}catch(e){}
   const el=document.getElementById("submissions-list");
   el.innerHTML='<div style="color:var(--mut);font-size:14px;padding:12px 0">Loading submissions...</div>';
-  // Fetch from Google Sheet for cross-device access
-  fetch(APPS_SCRIPT_URL+"?type=getSubmissions&t="+Date.now(),{method:"GET"})
-    .then(r=>r.json())
-    .then(data=>{
-      if(data.status==="success"&&data.submissions&&data.submissions.length){
-        // Merge sheet submissions with local (local may have photo data)
-        const sheetSubs=data.submissions;
-        const localMap={};
-        SUBMISSIONS.forEach(s=>{if(s.id)localMap[s.id]=s;});
-        // Add sheet submissions not in local
-        sheetSubs.forEach(s=>{
-          if(!localMap[s.id]){
-            SUBMISSIONS.unshift(s);
-            localMap[s.id]=s;
-          }
-        });
-        try{localStorage.setItem("tkm9_submissions",JSON.stringify(SUBMISSIONS));}catch(e){}
-      }
-      renderSubmissionsList();
-    })
-    .catch(()=>{
-      // Fall back to local only
-      renderSubmissionsList();
-    });
+  // Fetch from Google Sheet using JSONP to avoid CORS
+  const cbName="tkm9cb"+Date.now();
+  window[cbName]=function(data){
+    try{delete window[cbName];}catch(e){}
+    const s2=document.getElementById("gs-script");
+    if(s2)s2.remove();
+    if(data&&data.status==="success"&&data.submissions&&data.submissions.length){
+      const localMap={};
+      SUBMISSIONS.forEach(s=>{if(s.id)localMap[s.id]=s;});
+      data.submissions.forEach(s=>{
+        if(!localMap[s.id]){SUBMISSIONS.unshift(s);localMap[s.id]=s;}
+      });
+      try{localStorage.setItem("tkm9_submissions",JSON.stringify(SUBMISSIONS));}catch(e){}
+    }
+    renderSubmissionsList();
+  };
+  const sc=document.createElement("script");
+  sc.id="gs-script";
+  sc.src=APPS_SCRIPT_URL+"?type=getSubmissions&callback="+cbName+"&t="+Date.now();
+  sc.onerror=function(){renderSubmissionsList();};
+  setTimeout(function(){if(window[cbName]){delete window[cbName];renderSubmissionsList();}},8000);
+  document.head.appendChild(sc);
 }
 function renderSubmissionsList(){
   const el=document.getElementById("submissions-list");
