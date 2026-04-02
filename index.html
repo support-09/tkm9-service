@@ -306,7 +306,10 @@ textarea{resize:vertical;min-height:78px}
 
     <div id="tab-submissions-content" style="display:none">
       <div class="asec" id="subs-list-panel">
-        <h3>Submitted Reports</h3>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <h3 style="margin-bottom:0">Submitted Reports</h3>
+          <button onclick="renderSubmissions()" style="background:var(--su2);border:1.5px solid var(--bor);border-radius:var(--rsm);padding:7px 14px;font-size:12px;font-weight:700;color:var(--txt);cursor:pointer;font-family:'DM Sans',sans-serif">&#8635; Refresh</button>
+        </div>
         <div id="submissions-list"></div>
       </div>
       <div id="sub-detail-panel" style="display:none">
@@ -755,38 +758,59 @@ function adminSaveClient(){
 function renderSubmissions(){
   try{SUBMISSIONS=JSON.parse(localStorage.getItem("tkm9_submissions")||"[]");}catch(e){}
   const el=document.getElementById("submissions-list");
-  el.innerHTML='<div style="color:var(--mut);font-size:14px;padding:12px 0">Loading submissions...</div>';
-  // Fetch from Google Sheet using JSONP to avoid CORS
+  el.innerHTML='<div style="color:var(--mut);font-size:14px;padding:12px 0;display:flex;align-items:center;gap:8px"><span class="spin" style="display:inline-block;width:14px;height:14px;border:2px solid var(--bor);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite"></span>Syncing from server...</div>';
+  // Remove any stale script tag
+  const old=document.getElementById("gs-script");if(old)old.remove();
   const cbName="tkm9cb"+Date.now();
-  window[cbName]=function(data){
+  let settled=false;
+  function settle(source){
+    if(settled)return;settled=true;
     try{delete window[cbName];}catch(e){}
-    const s2=document.getElementById("gs-script");
-    if(s2)s2.remove();
+    const s2=document.getElementById("gs-script");if(s2)s2.remove();
+    // Show sync status banner
+    const localCount=SUBMISSIONS.length;
+    const banner=source==="sheet"
+      ? `<div style="font-size:11px;color:var(--grn);padding:6px 10px;background:var(--gl);border-radius:var(--rsm);margin-bottom:10px">&#10003; Synced from Google Sheet &mdash; ${localCount} submission${localCount!==1?"s":""}</div>`
+      : `<div style="font-size:11px;color:var(--mut);padding:6px 10px;background:var(--su2);border-radius:var(--rsm);margin-bottom:10px">Showing ${localCount} local submission${localCount!==1?"s":""} (sheet sync unavailable &mdash; check Apps Script is redeployed)</div>`;
+    renderSubmissionsList(banner);
+  }
+  window[cbName]=function(data){
     if(data&&data.status==="success"&&data.submissions&&data.submissions.length){
       const localMap={};
       SUBMISSIONS.forEach(s=>{if(s.id)localMap[s.id]=s;});
       data.submissions.forEach(s=>{
-        if(!localMap[s.id]){SUBMISSIONS.unshift(s);localMap[s.id]=s;}
+        if(s.id&&!localMap[s.id]){SUBMISSIONS.unshift(s);localMap[s.id]=s;}
+        else if(s.id&&localMap[s.id]){
+          // Merge sheet data into existing local record (sheet is source of truth for basic fields)
+          Object.assign(localMap[s.id],{clientSlug:s.clientSlug||localMap[s.id].clientSlug,clientName:s.clientName||localMap[s.id].clientName,techName:s.techName||localMap[s.id].techName,serviceDate:s.serviceDate||localMap[s.id].serviceDate,serviceType:s.serviceType||localMap[s.id].serviceType});
+        }
       });
+      // Sort by timestamp descending
+      SUBMISSIONS.sort((a,b)=>new Date(b.timestamp)-new Date(a.timestamp));
       try{localStorage.setItem("tkm9_submissions",JSON.stringify(SUBMISSIONS));}catch(e){}
+      settle("sheet");
+    } else {
+      settle("local");
     }
-    renderSubmissionsList();
   };
   const sc=document.createElement("script");
   sc.id="gs-script";
   sc.src=APPS_SCRIPT_URL+"?type=getSubmissions&callback="+cbName+"&t="+Date.now();
-  sc.onerror=function(){renderSubmissionsList();};
-  setTimeout(function(){if(window[cbName]){delete window[cbName];renderSubmissionsList();}},8000);
+  sc.onerror=function(){settle("local");};
+  setTimeout(function(){if(!settled)settle("local");},8000);
   document.head.appendChild(sc);
 }
-function renderSubmissionsList(){
+function renderSubmissionsList(banner){
   const el=document.getElementById("submissions-list");
-  if(!SUBMISSIONS.length){el.innerHTML='<div style="color:var(--mut);font-size:14px;padding:12px 0">No submissions found.</div>';return;}
-  el.innerHTML=SUBMISSIONS.map((s,i)=>{
+  if(!SUBMISSIONS.length){
+    el.innerHTML=(banner||"")+'<div style="color:var(--mut);font-size:14px;padding:12px 0">No submissions found.</div>';
+    return;
+  }
+  const tagMap={"Q1: JAN-MAR":"tq1","Q2: APR-JUN":"tq2","Q3: JUL-SEP":"tq3","Q4: OCT-DEC":"tq4","CALLOUT":"tco"};
+  el.innerHTML=(banner||"")+SUBMISSIONS.map((s,i)=>{
     const d=new Date(s.timestamp);
-    const tagMap={"Q1: JAN-MAR":"tq1","Q2: APR-JUN":"tq2","Q3: JUL-SEP":"tq3","Q4: OCT-DEC":"tq4","CALLOUT":"tco"};
-    const tags=(s.serviceTypes||[s.serviceType]).map(t=>`<span class="tag ${tagMap[t]||"tq1"}">${t}</span>`).join(" ");
-    return `<div class="sub-item" onclick="viewSubmission(${i})"><strong>${s.clientName}</strong> &mdash; ${tags}<div class="sub-meta">${s.techName} &middot; ${d.toLocaleDateString("en-AU")} ${d.toLocaleTimeString("en-AU",{hour:"2-digit",minute:"2-digit"})}</div></div>`;
+    const tags=(s.serviceTypes||[s.serviceType]).filter(Boolean).map(t=>`<span class="tag ${tagMap[t]||"tq1"}">${t}</span>`).join(" ");
+    return `<div class="sub-item" onclick="viewSubmission(${i})"><strong>${s.clientName||s.clientSlug||"Unknown"}</strong> &mdash; ${tags}<div class="sub-meta">${s.techName||""} &middot; ${d.toLocaleDateString("en-AU")} ${d.toLocaleTimeString("en-AU",{hour:"2-digit",minute:"2-digit"})}</div></div>`;
   }).join("");
 }
 function showSubsList(){document.getElementById("subs-list-panel").style.display="block";document.getElementById("sub-detail-panel").style.display="none";document.getElementById("sub-edit-panel").style.display="none";}
