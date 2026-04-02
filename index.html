@@ -533,6 +533,7 @@ function goNext(){
     S.serviceDate=document.getElementById("service-date").value;
     S.calloutReason=document.getElementById("callout-reason").value;
     S.calloutReporter=document.getElementById("callout-reporter").value;
+    if(!S.client){alert("Invalid form link. Please use a valid client URL.");return;}
     if(!S.techName){alert("Please enter your name.");return;}
     if(!S.serviceDate){alert("Please select a date.");return;}
     if(!S.serviceType){alert("Please select a service type.");return;}
@@ -841,11 +842,52 @@ function editSubmission(){
       html+=`<div class="field"><label>Condition Notes</label><input type="text" id="edit-condNote-${zid}" value="${esc(z.condNote||'')}"></div>`;
       html+='<div style="font-size:11px;font-weight:600;color:var(--mut);margin-bottom:8px;text-transform:uppercase;letter-spacing:.07em">Service Checks</div>';
       html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px">';
-      Object.entries(checks).forEach(([k,label])=>{
-        if(z[k]){html+=`<div class="field" style="margin-bottom:4px"><label style="text-transform:none;letter-spacing:0;font-size:12px">${label}</label><select id="edit-check-${zid}-${k}"><option value="">-</option><option value="Yes" ${z[k]==="Yes"?"selected":""}>Yes</option><option value="No" ${z[k]==="No"?"selected":""}>No</option></select></div>`;}
+      const zoneData2=client?.zones?.find(z2=>z2.id===zid)||client?.zones?.[parseInt(znum)-1];
+      const applicableChecks={};
+      if(zoneData2?.isProjection||!zoneData2){Object.assign(applicableChecks,{"projOn":"Projection Aligned","motionOk":"Motion Sensors OK","soundCalib":"Sound Calibrated","equipClean":"Equipment Clean"});}
+      if(zoneData2?.isSpecial){Object.assign(applicableChecks,{"deadPixels":"Damaged Pixels?","colourOk":"Colour/Calibration OK","soundCalib2":"Sound Calibrated","animalsWorking":"Animals Working","animalsPresent":"All Animals Present"});}
+      if(zoneData2?.isServerRoom){Object.assign(applicableChecks,{"airflow":"Airflow OK","noClutter":"No Clutter","signalOk":"Signal OK"});}
+      if(!zoneData2||zoneData2?.hasScreens){Object.assign(applicableChecks,{"touchOk":"Touch Working","cameraOk":"Camera Secure"});}
+      if(!zoneData2?.isServerRoom&&!zoneData2?.isProjection){Object.assign(applicableChecks,{"cracks":"Visual Cracks/Damage","fixings":"All Fixings Secure","ventBlocked":"Ventilation Clear","dirtyCorners":"Screen Corners Clean","hotItems":"No Hot Items","cablesOk":"All Cables Secure","dustInternal":"No Internal Dust"});}
+      if(!zoneData2||zoneData2?.hasSound){Object.assign(applicableChecks,{"soundOk":"Sound Working","volumeOk":"Volume Adequate"});}
+      if(!zoneData2||zoneData2?.hasLight){Object.assign(applicableChecks,{"lightOk":"Lighting Working"});}
+      if(zoneData2?.hasOther){Object.assign(applicableChecks,{"otherOk":"Other Items OK"});}
+      const checksToShow=Object.keys(applicableChecks).length>0?applicableChecks:checks;
+      Object.entries(checksToShow).forEach(([k,label])=>{
+        html+=`<div class="field" style="margin-bottom:4px"><label style="text-transform:none;letter-spacing:0;font-size:12px">${label}</label><select id="edit-check-${zid}-${k}" style="padding:8px 10px;font-size:13px"><option value="">Not recorded</option><option value="Yes" ${z[k]==="Yes"?"selected":""}>&#10003; Yes</option><option value="No" ${z[k]==="No"?"selected":""}>&#10007; No</option></select></div>`;
       });
       html+='</div>';
-      html+=`<div class="field"><label>Zone Summary</label><textarea id="edit-zoneNote-${zid}">${esc(z.zoneNote||'')}</textarea></div></div>`;
+      if(s.photos&&s.photos[zid]){
+        const arr=Array.isArray(s.photos[zid])?s.photos[zid]:[];
+        if(arr.length){
+          html+=`<div style="font-size:11px;font-weight:600;color:var(--mut);margin-bottom:8px;text-transform:uppercase;letter-spacing:.07em">Photos (${arr.length})</div>`;
+          html+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">';
+          arr.forEach(p=>{
+            const src=typeof p==="string"?p:p.data;
+            const isVid=typeof p==="object"&&p.type&&p.type.startsWith("video");
+            const driveUrl=typeof p==="object"&&p.driveUrl?p.driveUrl:"";
+            if(isVid&&driveUrl){html+=`<a href="${driveUrl}" target="_blank" style="display:flex;align-items:center;justify-content:center;width:80px;height:60px;background:var(--su2);border-radius:6px;color:var(--blue);font-size:11px;font-weight:600;text-decoration:none">&#9654; Video</a>`;}
+            else if(isVid){html+=`<div style="display:flex;align-items:center;justify-content:center;width:80px;height:60px;background:var(--su2);border-radius:6px;color:var(--mut);font-size:11px">Video</div>`;}
+            else{html+=`<img src="${src}" style="width:80px;height:60px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="window.open('${src}','_blank')">`;}
+          });
+          html+='</div>';
+        }
+      }
+      html+=`<div class="field"><label>Zone Summary</label><textarea id="edit-zoneNote-${zid}">${esc(z.zoneNote||'')}</textarea></div>`;
+      // Show existing photos with delete option
+      if(s.photos&&s.photos[zid]&&s.photos[zid].length){
+        html+='<div style="font-size:11px;font-weight:600;color:var(--mut);margin-bottom:6px;text-transform:uppercase;letter-spacing:.07em">Photos</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">';
+        s.photos[zid].forEach((p,pi)=>{
+          const src=typeof p==="string"?p:p.data;
+          const isVid=typeof p==="object"&&p.type&&p.type.startsWith("video");
+          const driveUrl=typeof p==="object"&&p.driveUrl?p.driveUrl:"";
+          if(driveUrl){html+=`<div style="position:relative"><a href="${driveUrl}" target="_blank"><img src="${typeof p==="object"&&p.thumbUrl?p.thumbUrl:src}" style="width:70px;height:60px;object-fit:cover;border-radius:6px"></a><button onclick="deletePhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center">&#215;</button></div>`;}
+          else if(isVid){html+=`<div style="display:flex;align-items:center;justify-content:center;width:70px;height:60px;background:var(--su2);border-radius:6px;font-size:11px;color:var(--blue);position:relative">&#9654; Vid<button onclick="deletePhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer">&#215;</button></div>`;}
+          else{html+=`<div style="position:relative"><img src="${src}" style="width:70px;height:60px;object-fit:cover;border-radius:6px"><button onclick="deletePhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center">&#215;</button></div>`;}
+        });
+        html+='</div>';
+      }
+      html+='</div>';
     });
   }
   document.getElementById("sub-edit-content").innerHTML=html;
@@ -875,7 +917,7 @@ function saveSubEdit(){
     if(zoneNoteEl)s.zoneData[zid].zoneNote=zoneNoteEl.value;
     // Save check edits
     const checks=["touchOk","cameraOk","cracks","fixings","ventBlocked","dirtyCorners","hotItems","cablesOk","dustInternal","soundOk","volumeOk","lightOk","projOn","motionOk","soundCalib","equipClean","airflow","noClutter","signalOk"];
-    checks.forEach(k=>{const el=document.getElementById("edit-check-"+zid+"-"+k);if(el)s.zoneData[zid][k]=el.value;});
+    ["touchOk","cameraOk","cracks","fixings","ventBlocked","dirtyCorners","hotItems","cablesOk","dustInternal","soundOk","volumeOk","lightOk","projOn","motionOk","soundCalib","soundCalib2","equipClean","airflow","noClutter","signalOk","deadPixels","colourOk","animalsWorking","animalsPresent","otherOk"].forEach(k=>{const el=document.getElementById("edit-check-"+zid+"-"+k);if(el&&el.value)s.zoneData[zid][k]=el.value;else if(el&&el.value==="")delete s.zoneData[zid][k];});
   });}
   try{localStorage.setItem("tkm9_submissions",JSON.stringify(SUBMISSIONS));}catch(e){}
   showToast("Report updated!");
@@ -883,6 +925,13 @@ function saveSubEdit(){
   viewSubmission(currentSubIdx);
 }
 function cancelSubEdit(){document.getElementById("sub-edit-panel").style.display="none";document.getElementById("sub-detail-panel").style.display="block";}
+function deletePhoto(zid,pi){
+  if(currentSubIdx===null)return;
+  if(!confirm("Delete this photo?"))return;
+  SUBMISSIONS[currentSubIdx].photos[zid].splice(pi,1);
+  try{localStorage.setItem("tkm9_submissions",JSON.stringify(SUBMISSIONS));}catch(e){}
+  editSubmission();
+}
 function deleteSubmission(){
   if(currentSubIdx===null)return;
   const s=SUBMISSIONS[currentSubIdx];
