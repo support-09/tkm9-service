@@ -280,7 +280,7 @@ textarea{resize:vertical;min-height:78px}
 
   <div id="admin-main-view" style="display:none">
     <div class="admin-hdr">
-      <img src="https://raw.githubusercontent.com/support-09/tkm9-service/main/Supportdesk_signature_email-08.png" style="height:34px">
+      <img src="https://raw.githubusercontent.com/support-09/tkm9-service/main/Supportdesk_signature_email-08.png" style="height:34px;cursor:pointer" onclick="showTab('clients')" title="Back to client list">
       <h1>Service Reports</h1>
       <button class="admin-home-btn" onclick="exitAdmin()">&#127968; Home</button>
     </div>
@@ -450,7 +450,7 @@ function mkZBody(z){
   h+=`<label>Overall Condition</label><div class="cr" id="cond-${z.id}"><button class="cb" data-val="Good" onclick="setCond('${z.id}','Good')">Good</button><button class="cb" data-val="Medium" onclick="setCond('${z.id}','Medium')">Medium</button><button class="cb" data-val="Poor" onclick="setCond('${z.id}','Poor')">Poor</button></div>`;
   h+=`<div class="field"><label>Condition Comments (optional)</label><textarea id="cn-${z.id}" oninput="sf('${z.id}','condNote',this.value)"></textarea></div>`;
   h+='<div class="sh">Photos &amp; Video — Before Service</div>';
-  h+=`<div class="pa-btns"><div class="pa-btn"><input type="file" id="pi-cam-${z.id}" accept="image/*,video/*" capture="environment" multiple>&#128247; Take Photo/Video</div><div class="pa-btn"><input type="file" id="pi-lib-${z.id}" accept="image/*,video/*" multiple>&#128248; From Library</div></div>`;
+  h+=`<div class="pa-btns"><div class="pa-btn"><input type="file" id="pi-cam-${z.id}" accept="image/*,video/*" capture="environment" multiple>&#128247; Take Photo/Video</div><div class="pa-btn"><input type="file" id="pi-lib-${z.id}" accept="image/*,video/*" multiple>&#128248; Choose from Library</div></div>`;
   h+=`<div class="upload-prog" id="uprog-${z.id}"><div class="upload-prog-fill" id="uprog-fill-${z.id}" style="width:0%"></div></div>`;
   h+=`<div class="pg" id="pg-${z.id}"></div>`;
   h+='<div class="svc-banner">&#9874;&#65039; Service Checks</div>';
@@ -461,6 +461,7 @@ function mkZBody(z){
   if(!z.isServerRoom&&!z.isProjection){h+='<div class="sh">External — Safety &amp; Quality</div>';h+=yn(z.id,"cracks","Any visual cracks or damage?");h+=yn(z.id,"fixings","All fixings secure?");h+=yn(z.id,"ventBlocked","Any debris blocking ventilation holes?");h+=yn(z.id,"dirtyCorners","Any build-up or dirt in corners of screens?");h+='<div class="sh">Internal — Technical</div>';h+=yn(z.id,"hotItems","Any electrical items hot to touch? (LEDs, Media Players, Routers, Screens, Cabling)");h+=yn(z.id,"cablesOk","All cables securely in place?");h+=yn(z.id,"dustInternal","Dust or debris build-up internally?");}
   if(z.hasSound&&z.soundItems&&z.soundItems.length){h+=`<div class="sh">Sound</div><div class="sbox">Items to check: <strong>${z.soundItems.join(", ")}</strong></div>`;h+=yn(z.id,"soundOk","Sound working on ALL items?");h+=yn(z.id,"volumeOk","Volume level adequate?");}
   if(z.hasLight&&z.lightItems&&z.lightItems.length){h+=`<div class="sh">Lighting</div><div class="sbox">Items to check: <strong>${z.lightItems.join(", ")}</strong></div>`;h+=yn(z.id,"lightOk","Lighting working on ALL items?");}
+  if(z.hasOther&&z.otherItems&&z.otherItems.length){h+=`<div class="sh">Other</div><div class="sbox">Items to check: <strong>${z.otherItems.join(", ")}</strong></div>`;h+=yn(z.id,"otherOk","All other items checked and OK?");}
   h+=`<div class="sh">Zone Summary</div><div class="field"><label>Summary / Items to Flag</label><textarea id="zn-${z.id}" oninput="sf('${z.id}','zoneNote',this.value)"></textarea></div>`;
   h+=`<button class="mdb" onclick="markDone('${z.id}')">Mark Zone Complete &#10003;</button>`;
   return h;
@@ -678,7 +679,7 @@ function renderZoneEditor(){
     }).join("");
     const fpSrc=z.floorplan||"";
     const fpIsDrive=fpSrc.startsWith("http");
-    return `<div class="ze"><button class="zrmbtn" onclick="rmZone(${i})">Remove</button><h4>Zone ${i+1}</h4><div class="field"><label>Zone Name</label><input type="text" value="${esc(z.name)}" oninput="adminZones[${i}].name=this.value"></div><div class="field"><label>Reference Photos <span style="font-size:10px;color:var(--grn);font-weight:400;text-transform:none">&#9679; Upload → auto-saved to Google Drive</span></label><div class="zpuarea"><input type="file" accept="image/*" multiple onchange="handleAdminPhoto(event,${i})">&#128247; Upload zone photos</div>${thumbs?'<div class="zphumb">'+thumbs+"</div>":""}</div><div class="field"><label>Floor Plan / Location Map</label><div class="zpuarea"><input type="file" accept="image/*" onchange="handleAdminFP(event,${i})">&#128247; Upload floor plan</div>${fpSrc?`<div style="position:relative;display:inline-block;margin-top:6px"><img src="${fpSrc}" style="width:100%;max-height:70px;object-fit:contain;border-radius:6px"><div style="position:absolute;bottom:2px;left:2px;background:${fpIsDrive?"#0a0":"#c80"};color:#fff;font-size:8px;padding:1px 4px;border-radius:3px;font-weight:700">${fpIsDrive?"DRIVE":"LOCAL"}</div></div><br><button onclick="adminZones[${i}].floorplan='';renderZoneEditor()" style="font-size:11px;color:var(--red);background:none;border:none;cursor:pointer;margin-top:4px">Remove</button>`:""}</div><div class="field"><label>Scope Items</label>${scopeInputs}<button class="addsi" onclick="addScope(${i})">+ Add</button></div><div class="field"><label>Equipment</label><div class="cbrow"><label><input type="checkbox" ${z.hasScreens?"checked":""} onchange="adminZones[${i}].hasScreens=this.checked"> Screens</label><label><input type="checkbox" ${z.hasSound?"checked":""} onchange="adminZones[${i}].hasSound=this.checked"> Sound</label><label><input type="checkbox" ${z.hasLight?"checked":""} onchange="adminZones[${i}].hasLight=this.checked"> Lighting</label></div></div><div class="field"><label>Sound Items</label><input type="text" value="${(z.soundItems||[]).join(", ")}" oninput="adminZones[${i}].soundItems=this.value.split(',').map(s=>s.trim()).filter(Boolean)"></div><div class="field"><label>Light Items</label><input type="text" value="${(z.lightItems||[]).join(", ")}" oninput="adminZones[${i}].lightItems=this.value.split(',').map(s=>s.trim()).filter(Boolean)"></div></div>`;
+    return `<div class="ze"><button class="zrmbtn" onclick="rmZone(${i})">Remove</button><h4>Zone ${i+1}</h4><div class="field"><label>Zone Name</label><input type="text" value="${esc(z.name)}" oninput="adminZones[${i}].name=this.value"></div><div class="field"><label>Reference Photos <span style="font-size:10px;color:var(--grn);font-weight:400;text-transform:none">&#9679; Upload → auto-saved to Google Drive</span></label><div class="zpuarea"><input type="file" accept="image/*" multiple onchange="handleAdminPhoto(event,${i})">&#128247; Upload zone photos</div>${thumbs?'<div class="zphumb">'+thumbs+"</div>":""}</div><div class="field"><label>Floor Plan / Location Map</label><div class="zpuarea"><input type="file" accept="image/*" onchange="handleAdminFP(event,${i})">&#128247; Upload floor plan</div>${fpSrc?`<div style="position:relative;display:inline-block;margin-top:6px"><img src="${fpSrc}" style="width:100%;max-height:70px;object-fit:contain;border-radius:6px"><div style="position:absolute;bottom:2px;left:2px;background:${fpIsDrive?"#0a0":"#c80"};color:#fff;font-size:8px;padding:1px 4px;border-radius:3px;font-weight:700">${fpIsDrive?"DRIVE":"LOCAL"}</div></div><br><button onclick="adminZones[${i}].floorplan='';renderZoneEditor()" style="font-size:11px;color:var(--red);background:none;border:none;cursor:pointer;margin-top:4px">Remove</button>`:""}</div><div class="field"><label>Scope Items</label>${scopeInputs}<button class="addsi" onclick="addScope(${i})">+ Add</button></div><div class="field"><label>Equipment</label><div class="cbrow"><label><input type="checkbox" ${z.hasScreens?"checked":""} onchange="adminZones[${i}].hasScreens=this.checked"> Screens</label><label><input type="checkbox" ${z.hasSound?"checked":""} onchange="adminZones[${i}].hasSound=this.checked"> Sound</label><label><input type="checkbox" ${z.hasLight?"checked":""} onchange="adminZones[${i}].hasLight=this.checked"> Lighting</label><label><input type="checkbox" ${z.hasOther?"checked":""} onchange="adminZones[${i}].hasOther=this.checked"> Other</label></div></div><div class="field"><label>Sound Items</label><input type="text" value="${(z.soundItems||[]).join(", ")}" oninput="adminZones[${i}].soundItems=this.value.split(',').map(s=>s.trim()).filter(Boolean)"></div><div class="field"><label>Light Items</label><input type="text" value="${(z.lightItems||[]).join(", ")}" oninput="adminZones[${i}].lightItems=this.value.split(',').map(s=>s.trim()).filter(Boolean)"></div><div class="field"><label>Other Items</label><input type="text" value="${(z.otherItems||[]).join(", ")}" oninput="adminZones[${i}].otherItems=this.value.split(',').map(s=>s.trim()).filter(Boolean)"></div></div>`;
   }).join("");
 }
 async function uploadAdminPhotoToDrive(file, label){
@@ -734,7 +735,7 @@ async function handleAdminFP(e,i){
 function rmZonePhoto(i,pi){adminZones[i].photos.splice(pi,1);renderZoneEditor();}
 function addScope(i){adminZones[i].scope.push("");renderZoneEditor();}
 function rmScope(i,si){adminZones[i].scope.splice(si,1);renderZoneEditor();}
-function adminAddZone(){adminZones.push({id:"z"+(adminZones.length+1),name:"",photos:[],floorplan:"",scope:[""],hasScreens:true,hasSound:true,hasLight:false,soundItems:[],lightItems:[]});renderZoneEditor();}
+function adminAddZone(){adminZones.push({id:"z"+(adminZones.length+1),name:"",photos:[],floorplan:"",scope:[""],hasScreens:true,hasSound:true,hasLight:false,hasOther:false,soundItems:[],lightItems:[],otherItems:[]});renderZoneEditor();}
 function rmZone(i){if(adminZones.length>1){adminZones.splice(i,1);renderZoneEditor();}}
 function adminSaveClient(){
   const name=document.getElementById("e-name").value.trim();
@@ -814,16 +815,39 @@ function viewSubmission(i){
 function editSubmission(){
   if(currentSubIdx===null)return;
   const s=SUBMISSIONS[currentSubIdx];
-  let html=`<div class="fgrid"><div class="field"><label>Technician Name</label><input type="text" id="edit-techName" value="${esc(s.techName||"")}"></div><div class="field"><label>Mobile</label><input type="text" id="edit-techMobile" value="${esc(s.techMobile||"")}"></div></div>`;
-  html+=`<div class="fgrid"><div class="field"><label>Service Date</label><input type="date" id="edit-serviceDate" value="${s.serviceDate||""}"></div><div class="field"><label>Follow-up Required</label><select id="edit-followup"><option value="">-</option><option value="Yes" ${s.followup==="Yes"?"selected":""}>Yes</option><option value="No" ${s.followup==="No"?"selected":""}>No</option></select></div></div>`;
-  html+=`<div class="field"><label>Overall Notes</label><textarea id="edit-overallNotes">${esc(s.overallNotes||"")}</textarea></div>`;
-  if(s.zoneData){Object.entries(s.zoneData).forEach(([zid,z])=>{
-    const znum=zid.replace("z","");
-    html+=`<div style="background:var(--su2);border-radius:var(--rsm);padding:12px;margin-bottom:10px"><div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--blue);margin-bottom:8px">Zone ${znum}</div>`;
-    html+=`<div class="field"><label>Condition on Arrival</label><select id="edit-cond-${zid}"><option value="">-</option><option value="Good" ${z.condition==="Good"?"selected":""}>Good</option><option value="Medium" ${z.condition==="Medium"?"selected":""}>Medium</option><option value="Poor" ${z.condition==="Poor"?"selected":""}>Poor</option></select></div>`;
-    html+=`<div class="field"><label>Condition Notes</label><input type="text" id="edit-condNote-${zid}" value="${esc(z.condNote||"")}"></div>`;
-    html+=`<div class="field"><label>Zone Summary</label><textarea id="edit-zoneNote-${zid}">${esc(z.zoneNote||"")}</textarea></div></div>`;
-  });}
+  const tagMap={"Q1: JAN-MAR":"tq1","Q2: APR-JUN":"tq2","Q3: JUL-SEP":"tq3","Q4: OCT-DEC":"tq4","CALLOUT":"tco"};
+  const allTypes=["Q1: JAN-MAR","Q2: APR-JUN","Q3: JUL-SEP","Q4: OCT-DEC","CALLOUT"];
+  const currentTypes=s.serviceTypes||[s.serviceType];
+  let html='<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--blue);margin-bottom:10px">Technician</div>';
+  html+=`<div class="fgrid"><div class="field"><label>Technician Name</label><input type="text" id="edit-techName" value="${esc(s.techName||'')}"></div><div class="field"><label>Mobile</label><input type="text" id="edit-techMobile" value="${esc(s.techMobile||'')}"></div></div>`;
+  html+=`<div class="fgrid"><div class="field"><label>Service Date</label><input type="date" id="edit-serviceDate" value="${s.serviceDate||''}"></div><div class="field"><label>Follow-up Required</label><select id="edit-followup"><option value="">-</option><option value="Yes" ${s.followup==='Yes'?'selected':''}>Yes</option><option value="No" ${s.followup==='No'?'selected':''}>No</option></select></div></div>`;
+  html+='<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--blue);margin:14px 0 8px">Service Type</div>';
+  html+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">';
+  allTypes.forEach(t=>{html+=`<label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;letter-spacing:0;text-transform:none;cursor:pointer"><input type="checkbox" id="edit-type-${t.replace(/[^a-z0-9]/gi,'_')}" ${currentTypes.includes(t)?'checked':''} style="width:16px;height:16px;accent-color:var(--blue)"> ${t}</label>`;});
+  html+='</div>';
+  html+=`<div class="field"><label>Callout Reason</label><input type="text" id="edit-calloutReason" value="${esc(s.calloutReason||'')}"></div>`;
+  html+=`<div class="field"><label>Reported By</label><input type="text" id="edit-calloutReporter" value="${esc(s.calloutReporter||'')}"></div>`;
+  html+=`<div class="field"><label>Overall Notes</label><textarea id="edit-overallNotes">${esc(s.overallNotes||'')}</textarea></div>`;
+  if(s.zoneData){
+    html+='<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--blue);margin:14px 0 8px">Zones</div>';
+    const client=CLIENTS[s.clientSlug];
+    if(client&&client.zones){client.zones.forEach((z,i)=>{if(!z.id)z.id="z"+(i+1);});}
+    Object.entries(s.zoneData).forEach(([zid,z])=>{
+      const znum=zid.replace("z","");
+      const zoneName=client?.zones?.find(z2=>z2.id===zid)?.name||client?.zones?.[parseInt(znum)-1]?.name||"Zone "+znum;
+      const checks={"touchOk":"Touch Working","cameraOk":"Camera Secure","cracks":"Visual Cracks/Damage","fixings":"All Fixings Secure","ventBlocked":"Ventilation Clear","dirtyCorners":"Screen Corners Clean","hotItems":"No Hot Items","cablesOk":"All Cables Secure","dustInternal":"No Internal Dust","soundOk":"Sound Working","volumeOk":"Volume Adequate","lightOk":"Lighting Working","projOn":"Projection Aligned","motionOk":"Motion Sensors OK","soundCalib":"Sound Calibrated","equipClean":"Equipment Clean","airflow":"Airflow OK","noClutter":"No Clutter","signalOk":"Signal OK"};
+      html+=`<div style="background:var(--su2);border-radius:var(--rsm);padding:14px;margin-bottom:10px"><div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--blue);margin-bottom:10px">${zoneName}</div>`;
+      html+=`<div class="field"><label>Condition on Arrival</label><select id="edit-cond-${zid}"><option value="">-</option><option value="Good" ${z.condition==="Good"?"selected":""}>Good</option><option value="Medium" ${z.condition==="Medium"?"selected":""}>Medium</option><option value="Poor" ${z.condition==="Poor"?"selected":""}>Poor</option></select></div>`;
+      html+=`<div class="field"><label>Condition Notes</label><input type="text" id="edit-condNote-${zid}" value="${esc(z.condNote||'')}"></div>`;
+      html+='<div style="font-size:11px;font-weight:600;color:var(--mut);margin-bottom:8px;text-transform:uppercase;letter-spacing:.07em">Service Checks</div>';
+      html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px">';
+      Object.entries(checks).forEach(([k,label])=>{
+        if(z[k]){html+=`<div class="field" style="margin-bottom:4px"><label style="text-transform:none;letter-spacing:0;font-size:12px">${label}</label><select id="edit-check-${zid}-${k}"><option value="">-</option><option value="Yes" ${z[k]==="Yes"?"selected":""}>Yes</option><option value="No" ${z[k]==="No"?"selected":""}>No</option></select></div>`;}
+      });
+      html+='</div>';
+      html+=`<div class="field"><label>Zone Summary</label><textarea id="edit-zoneNote-${zid}">${esc(z.zoneNote||'')}</textarea></div></div>`;
+    });
+  }
   document.getElementById("sub-edit-content").innerHTML=html;
   document.getElementById("sub-detail-panel").style.display="none";
   document.getElementById("sub-edit-panel").style.display="block";
@@ -835,7 +859,13 @@ function saveSubEdit(){
   s.techMobile=document.getElementById("edit-techMobile").value;
   s.serviceDate=document.getElementById("edit-serviceDate").value;
   s.followup=document.getElementById("edit-followup").value;
+  s.calloutReason=document.getElementById("edit-calloutReason").value;
+  s.calloutReporter=document.getElementById("edit-calloutReporter").value;
   s.overallNotes=document.getElementById("edit-overallNotes").value;
+  // Service types
+  const allTypes=["Q1: JAN-MAR","Q2: APR-JUN","Q3: JUL-SEP","Q4: OCT-DEC","CALLOUT"];
+  s.serviceTypes=allTypes.filter(t=>document.getElementById("edit-type-"+t.replace(/[^a-z0-9]/gi,"_"))?.checked);
+  s.serviceType=s.serviceTypes.join(" + ");
   if(s.zoneData){Object.keys(s.zoneData).forEach(zid=>{
     const condEl=document.getElementById("edit-cond-"+zid);
     const condNoteEl=document.getElementById("edit-condNote-"+zid);
@@ -843,6 +873,9 @@ function saveSubEdit(){
     if(condEl)s.zoneData[zid].condition=condEl.value;
     if(condNoteEl)s.zoneData[zid].condNote=condNoteEl.value;
     if(zoneNoteEl)s.zoneData[zid].zoneNote=zoneNoteEl.value;
+    // Save check edits
+    const checks=["touchOk","cameraOk","cracks","fixings","ventBlocked","dirtyCorners","hotItems","cablesOk","dustInternal","soundOk","volumeOk","lightOk","projOn","motionOk","soundCalib","equipClean","airflow","noClutter","signalOk"];
+    checks.forEach(k=>{const el=document.getElementById("edit-check-"+zid+"-"+k);if(el)s.zoneData[zid][k]=el.value;});
   });}
   try{localStorage.setItem("tkm9_submissions",JSON.stringify(SUBMISSIONS));}catch(e){}
   showToast("Report updated!");
@@ -850,6 +883,17 @@ function saveSubEdit(){
   viewSubmission(currentSubIdx);
 }
 function cancelSubEdit(){document.getElementById("sub-edit-panel").style.display="none";document.getElementById("sub-detail-panel").style.display="block";}
+function deleteSubmission(){
+  if(currentSubIdx===null)return;
+  const s=SUBMISSIONS[currentSubIdx];
+  if(!confirm("Delete report for "+s.clientName+" ("+s.techName+" - "+s.serviceDate+")? This cannot be undone."))return;
+  SUBMISSIONS.splice(currentSubIdx,1);
+  try{localStorage.setItem("tkm9_submissions",JSON.stringify(SUBMISSIONS));}catch(e){}
+  currentSubIdx=null;
+  showSubsList();
+  renderSubmissions();
+  showToast("Report deleted");
+}
 
 function downloadSubPDF(){
   if(currentSubIdx===null)return;
@@ -915,7 +959,7 @@ function downloadSubPDF(){
   win.document.title=filename;
 }
 
-function exitAdmin(){window.location.href=window.location.pathname;}
+function exitAdmin(){window.location.href=window.location.pathname+"?admin";}
 function esc(s){return(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
 function downloadFile(){
     // Download function - regenerates index.html with current client data
