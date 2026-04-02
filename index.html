@@ -857,22 +857,19 @@ function editSubmission(){
         html+=`<div class="field" style="margin-bottom:4px"><label style="text-transform:none;letter-spacing:0;font-size:12px">${label}</label><select id="edit-check-${zid}-${k}" style="padding:8px 10px;font-size:13px"><option value="">Not recorded</option><option value="Yes" ${z[k]==="Yes"?"selected":""}>&#10003; Yes</option><option value="No" ${z[k]==="No"?"selected":""}>&#10007; No</option></select></div>`;
       });
       html+='</div>';
-      if(s.photos&&s.photos[zid]){
-        const arr=Array.isArray(s.photos[zid])?s.photos[zid]:[];
-        if(arr.length){
-          html+=`<div style="font-size:11px;font-weight:600;color:var(--mut);margin-bottom:8px;text-transform:uppercase;letter-spacing:.07em">Photos (${arr.length})</div>`;
-          html+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">';
-          arr.forEach(p=>{
-            const src=typeof p==="string"?p:p.data;
-            const isVid=typeof p==="object"&&p.type&&p.type.startsWith("video");
-            const driveUrl=typeof p==="object"&&p.driveUrl?p.driveUrl:"";
-            if(isVid&&driveUrl){html+=`<a href="${driveUrl}" target="_blank" style="display:flex;align-items:center;justify-content:center;width:80px;height:60px;background:var(--su2);border-radius:6px;color:var(--blue);font-size:11px;font-weight:600;text-decoration:none">&#9654; Video</a>`;}
-            else if(isVid){html+=`<div style="display:flex;align-items:center;justify-content:center;width:80px;height:60px;background:var(--su2);border-radius:6px;color:var(--mut);font-size:11px">Video</div>`;}
-            else{html+=`<img src="${src}" style="width:80px;height:60px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="window.open('${src}','_blank')">`;}
-          });
-          html+='</div>';
-        }
-      }
+      s.photos=s.photos||{};s.photos[zid]=s.photos[zid]||[];
+      const photoArr=Array.isArray(s.photos[zid])?s.photos[zid]:[];
+      html+=`<div style="font-size:11px;font-weight:600;color:var(--mut);margin-bottom:8px;text-transform:uppercase;letter-spacing:.07em">Photos</div>`;
+      html+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px" id="edit-photos-'+zid+'">';
+      photoArr.forEach((p,pi)=>{
+        const src=typeof p==="string"?p:(p.driveUrl||p.data||"");
+        const isVid=typeof p==="object"&&p.type&&p.type.startsWith("video");
+        const driveUrl=typeof p==="object"&&p.driveUrl?p.driveUrl:"";
+        if(isVid&&driveUrl){html+=`<div style="position:relative"><a href="${driveUrl}" target="_blank" style="display:flex;align-items:center;justify-content:center;width:80px;height:60px;background:var(--su2);border-radius:6px;color:var(--blue);font-size:11px;font-weight:600;text-decoration:none">&#9654; Video</a><button onclick="editDeletePhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center">&#215;</button></div>`;}
+        else if(src){html+=`<div style="position:relative"><img src="${src}" style="width:80px;height:60px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="editViewPhoto(${pi},'${zid}')"><button onclick="editDeletePhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center">&#215;</button></div>`;}
+      });
+      html+='</div>';
+      html+=`<div class="pa-btn" style="width:fit-content;margin-bottom:12px;padding:8px 14px;font-size:12px"><input type="file" accept="image/*,video/*" multiple onchange="editAddPhotos(event,'${zid}')">&#128247; Add Photos</div>`;
       html+=`<div class="field"><label>Zone Summary</label><textarea id="edit-zoneNote-${zid}">${esc(z.zoneNote||'')}</textarea></div>`;
       // Show existing photos with delete option
       if(s.photos&&s.photos[zid]&&s.photos[zid].length){
@@ -1008,6 +1005,46 @@ function downloadSubPDF(){
   win.document.title=filename;
 }
 
+function editViewPhoto(pi,zid){
+  if(currentSubIdx===null)return;
+  const s=SUBMISSIONS[currentSubIdx];
+  const arr=s.photos&&s.photos[zid]?s.photos[zid]:[];
+  const p=arr[pi];
+  const src=typeof p==="string"?p:(p.driveUrl||p.data||"");
+  if(!src)return;
+  const w=window.open("","_blank");
+  w.document.write('<html><body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh"><img src="'+src+'" style="max-width:100%;max-height:100vh;object-fit:contain"></body></html>');
+  w.document.close();
+}
+function editDeletePhoto(zid,pi){
+  if(currentSubIdx===null)return;
+  const s=SUBMISSIONS[currentSubIdx];
+  if(!s.photos||!s.photos[zid])return;
+  if(!confirm("Delete this photo?"))return;
+  s.photos[zid].splice(pi,1);
+  try{localStorage.setItem("tkm9_submissions",JSON.stringify(SUBMISSIONS));}catch(e){}
+  editSubmission();
+}
+async function editAddPhotos(e,zid){
+  if(currentSubIdx===null)return;
+  const s=SUBMISSIONS[currentSubIdx];
+  s.photos=s.photos||{};s.photos[zid]=s.photos[zid]||[];
+  const files=Array.from(e.target.files);
+  if(!files.length)return;
+  showToast("Adding "+files.length+" photo"+(files.length>1?"s":"")+"...");
+  for(const f of files){
+    const r=new FileReader();
+    await new Promise(res=>{r.onload=ev=>{
+      const item={data:ev.target.result,type:f.type,name:f.name,driveUrl:"",driveId:""};
+      s.photos[zid].push(item);
+      uploadToDrive(item,zid);
+      res();
+    };r.readAsDataURL(f);});
+  }
+  try{localStorage.setItem("tkm9_submissions",JSON.stringify(SUBMISSIONS));}catch(e){}
+  showToast("Photos added!");
+  editSubmission();
+}
 function exitAdmin(){window.location.href=window.location.pathname+"?admin";}
 function esc(s){return(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
 function downloadFile(){
