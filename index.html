@@ -181,7 +181,7 @@ textarea{resize:vertical;min-height:78px}
   <img class="hdr-logo" src="https://raw.githubusercontent.com/support-09/tkm9-service/main/SUPPORTHEADER_freshdesk_headphone-05-05.png" alt="TKM9 Service Desk">
   <div class="step-pill" id="step-pill">Step <b id="step-cur">1</b> of 3</div>
 </div>
-<div class="prog-bar" id="prog-bar"><div class="prog-fill" id="prog" style="width:33%"></div></div>
+<div class="prog-bar" id="prog-bar" style="display:none"><div class="prog-fill" id="prog" style="width:33%"></div></div>
 
 <div id="invalid-screen" style="display:none">
   <div class="inv">
@@ -194,7 +194,7 @@ textarea{resize:vertical;min-height:78px}
 </div>
 
 <!-- SCREEN 1 -->
-<div class="screen active" id="screen-1">
+<div class="screen" id="screen-1">
   <div id="banner-1"></div>
   <div style="font-size:20px;font-weight:700;margin-bottom:4px">Start Report</div>
   <div style="font-size:13px;color:var(--mut);margin-bottom:18px">Enter your details and select service type.</div>
@@ -258,7 +258,7 @@ textarea{resize:vertical;min-height:78px}
   <div style="margin-top:16px"><button class="btn bs" style="width:100%" onclick="hardReset()">Start New Report</button></div>
 </div>
 
-<div class="bnav" id="bottom-nav">
+<div class="bnav" id="bottom-nav" style="display:none">
   <button class="btn bs" id="btn-back" style="display:none" onclick="goBack()">&larr; Back</button>
   <button class="btn bp" id="btn-next" onclick="goNext()">Continue &rarr;</button>
 </div>
@@ -388,6 +388,9 @@ document.addEventListener("DOMContentLoaded",()=>{
     return;
   }
   S.slug=slug;S.client=CLIENTS[slug];
+  document.getElementById("screen-1").classList.add("active");
+  document.getElementById("bottom-nav").style.display="";
+  document.getElementById("prog-bar").style.display="";
   const b=mkBanner(S.client);
   document.getElementById("banner-1").innerHTML=b;
   document.getElementById("banner-2").innerHTML=b;
