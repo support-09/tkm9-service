@@ -945,106 +945,174 @@ function downloadSubPDF(){
   if(currentSubIdx===null)return;
   const s=SUBMISSIONS[currentSubIdx];
   const client=CLIENTS[s.clientSlug];
+  if(client&&client.zones){client.zones.forEach((z,i)=>{if(!z.id)z.id="z"+(i+1);});}
   const now=new Date();
-  const dateStr=s.serviceDate?s.serviceDate.replace(/-/g,""):"";
-  const typeStr=s.serviceType?s.serviceType.replace(/[^A-Z0-9]/gi,"_"):"";
-  const filename=`SERVICE_${(s.clientName||"").replace(/[^a-z0-9]/gi,"_")}_${typeStr}_${dateStr}.pdf`;
-  const tagMap={"Q1: JAN-MAR":"#eeeeff","Q2: APR-JUN":"#e6f7ef","Q3: JUL-SEP":"#fff3e0","Q4: OCT-DEC":"#f3eeff","CALLOUT":"#ffebee"};
-  const tagColorText={"Q1: JAN-MAR":"#1a1aff","Q2: APR-JUN":"#00a550","Q3: JUL-SEP":"#d97000","Q4: OCT-DEC":"#7744cc","CALLOUT":"#cc2233"};
-  const tags=(s.serviceTypes||[s.serviceType]).map(t=>`<span style="background:${tagMap[t]||"#eee"};color:${tagColorText[t]||"#333"};padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;font-family:monospace;text-transform:uppercase;margin-right:4px">${t}</span>`).join("");
+  const formattedDate=s.serviceDate?new Date(s.serviceDate).toLocaleDateString("en-AU",{day:"numeric",month:"long",year:"numeric"}):"-";
+  const filename="TKM9_SERVICE_"+((s.clientName||"").replace(/[^a-z0-9]/gi,"_"))+"_"+(s.serviceDate||"").replace(/-/g,"")+"_"+(s.serviceType||"").replace(/[^a-z0-9]/gi,"_")+".pdf";
+
+  const tagMap={"Q1: JAN-MAR":["#e8e8ff","#1a1aff"],"Q2: APR-JUN":["#e6f7ef","#00a550"],"Q3: JUL-SEP":["#fff3e0","#d97000"],"Q4: OCT-DEC":["#f3eeff","#7744cc"],"CALLOUT":["#ffebee","#cc2233"]};
+  const tags=(s.serviceTypes||[s.serviceType]).filter(Boolean).map(t=>{const[bg,col]=tagMap[t]||["#eee","#333"];return`<span style="background:${bg};color:${col};padding:4px 14px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.06em;margin-left:6px">${t}</span>`;}).join("");
+
+  const checkLabels={"touchOk":"Touch Working on All Areas of Game","cameraOk":"Camera Securely in Place","cracks":"Visual Cracks or Damage","fixings":"All Fixings Secure","ventBlocked":"Debris Blocking Ventilation Holes","dirtyCorners":"Build-up or Dirt in Screen Corners","hotItems":"Electrical Items Hot to Touch","cablesOk":"All Cables Securely in Place","dustInternal":"Dust or Debris Build-up Internally","soundOk":"Sound Working on All Items","volumeOk":"Volume Level Adequate","lightOk":"Lighting Working on All Items","projOn":"Projection On and Aligned to Canvas","motionOk":"All Motion Detection Sensors Working","soundCalib":"Sound Working and Calibrated","equipClean":"Equipment Clean and Clear of Dust","deadPixels":"Damaged Pixels on LED Panels","colourOk":"Colour and Calibration Correct","soundCalib2":"Sound Calibration Correct","animalsWorking":"All Animals Working with Screen","animalsPresent":"All Animals Present in Tray","airflow":"Airflow and Heat OK for All Equipment","noClutter":"Room Clear of Clutter","signalOk":"Signal Strength as Intended","otherOk":"All Other Items Checked and OK"};
+  const condCol=c=>c==="Good"?"#00a550":c==="Poor"?"#cc2233":"#d97000";
+  const ynBg=v=>v==="Yes"?"#e6f7ef":"#ffebee";
+  const ynCol=v=>v==="Yes"?"#00a550":"#cc2233";
+  const ynIcon=v=>v==="Yes"?"✓":"✗";
+
   let zonesHtml="";
   if(s.zoneData){
     Object.entries(s.zoneData).forEach(([zid,z])=>{
       const znum=zid.replace("z","");
-      const zoneName=client?.zones?.find(z2=>z2.id===zid)?.name||"Zone "+znum;
-      const zoneData=client?.zones?.find(z2=>z2.id===zid);
-      let refPhotos="";
-      if(zoneData?.photos?.length){
-        refPhotos='<div style="margin-bottom:12px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#888;margin-bottom:6px">Zone Reference</div><div style="display:flex;gap:8px;flex-wrap:wrap">';
-        zoneData.photos.forEach(p=>{refPhotos+=`<img src="${p}" style="height:100px;border-radius:6px;object-fit:cover">`;}); 
-        refPhotos+="</div></div>";
+      const zoneData=client?.zones?.find(z2=>z2.id===zid)||client?.zones?.[parseInt(znum)-1];
+      const zoneName=zoneData?.name||"Zone "+znum;
+
+      // Reference photos
+      let refSection="";
+      const refPhotos=(zoneData?.photos||[]).filter(p=>p&&p.length>0);
+      if(refPhotos.length){
+        refSection+=`<div style="margin-bottom:20px"><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#6b6f8a;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #eee">Reference Photos</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px">`;
+        refPhotos.forEach(p=>{refSection+=`<img src="${p}" style="width:100%;height:140px;object-fit:cover;border-radius:8px;border:1px solid #eee">`;});
+        refSection+=`</div></div>`;
       }
-      if(zoneData?.floorplan)refPhotos+=`<div style="margin-bottom:12px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#888;margin-bottom:6px">Location Map</div><img src="${zoneData.floorplan}" style="max-height:120px;border-radius:6px;object-fit:contain;background:#f0f1f6;padding:4px"></div>`;
-      const checks={"touchOk":"Touch Working","cameraOk":"Camera Secure","cracks":"Visual Cracks/Damage","fixings":"All Fixings Secure","ventBlocked":"Ventilation Clear","dirtyCorners":"Screen Corners Clean","hotItems":"No Hot Items","cablesOk":"All Cables Secure","dustInternal":"No Internal Dust","soundOk":"Sound Working","volumeOk":"Volume Adequate","lightOk":"Lighting Working","projOn":"Projection Aligned","motionOk":"Motion Sensors OK","soundCalib":"Sound Calibrated","equipClean":"Equipment Clean","airflow":"Airflow OK","noClutter":"No Clutter","signalOk":"Signal OK"};
-      let checksHtml='<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px">';
-      let hasChecks=false;
-      Object.entries(checks).forEach(([k,label])=>{
-        if(z[k]){hasChecks=true;checksHtml+=`<tr><td style="padding:4px 6px;border-bottom:1px solid #f0f0f0;color:#555">${label}</td><td style="padding:4px 6px;border-bottom:1px solid #f0f0f0;font-weight:700;color:${z[k]==="Yes"?"#00a550":"#cc2233"};text-align:right">${z[k]}</td></tr>`;}
-      });
-      checksHtml+="</table>";
-      let photoHtml="";
+
+      // Scope of work
+      let scopeSection="";
+      if(zoneData?.scope?.length){
+        scopeSection+=`<div style="margin-bottom:20px"><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#6b6f8a;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #eee">Scope of Work</div><ul style="margin:0;padding-left:18px">`;
+        zoneData.scope.forEach(item=>{scopeSection+=`<li style="font-size:12px;color:#444;margin-bottom:4px;line-height:1.5">${item}</li>`;});
+        scopeSection+=`</ul></div>`;
+      }
+
+      // Condition
+      const condSection=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
+        <div style="background:#f8f8ff;border-radius:10px;padding:14px 16px;border:1px solid #e8e8ff">
+          <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#1a1aff;margin-bottom:6px">Condition on Arrival</div>
+          <div style="font-size:15px;font-weight:700;color:${condCol(z.condition||"")}">${z.condition||"Not recorded"}</div>
+          ${z.condNote?`<div style="font-size:12px;color:#555;margin-top:5px;line-height:1.4">${z.condNote}</div>`:""}
+        </div>
+        <div style="background:#f8f8ff;border-radius:10px;padding:14px 16px;border:1px solid #e8e8ff">
+          <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#1a1aff;margin-bottom:6px">Zone Summary</div>
+          <div style="font-size:12px;color:#333;line-height:1.5">${z.zoneNote||"No additional notes."}</div>
+        </div>
+      </div>`;
+
+      // Service checks
+      let checksSection="";
+      const checksToShow=Object.entries(checkLabels).filter(([k])=>z[k]);
+      if(checksToShow.length){
+        checksSection+=`<div style="margin-bottom:20px"><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#6b6f8a;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #eee">Service Checks</div>`;
+        checksSection+=`<table style="width:100%;border-collapse:collapse">`;
+        checksToShow.forEach(([k,label])=>{
+          checksSection+=`<tr><td style="padding:7px 10px;border-bottom:1px solid #f4f4f8;font-size:12px;color:#333;width:85%">${label}</td><td style="padding:7px 10px;border-bottom:1px solid #f4f4f8;text-align:right"><span style="background:${ynBg(z[k])};color:${ynCol(z[k])};font-weight:700;font-size:11px;padding:3px 10px;border-radius:20px">${ynIcon(z[k])} ${z[k]}</span></td></tr>`;
+        });
+        checksSection+=`</table></div>`;
+      }
+
+      // Field photos
+      let photoSection="";
       if(s.photos&&s.photos[zid]){
         const arr=Array.isArray(s.photos[zid])?s.photos[zid]:[];
-        if(arr.length){
-          photoHtml='<div style="margin-top:10px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#888;margin-bottom:6px">Service Photos ('+(arr.length)+')</div><div style="display:flex;gap:8px;flex-wrap:wrap">';
-          arr.forEach(p=>{
-            const src=typeof p==="string"?p:p.data;
-            const isVid=typeof p==="object"&&p.type&&p.type.startsWith("video");
-            const driveUrl=typeof p==="object"&&p.driveUrl;
-            if(isVid&&driveUrl){photoHtml+=`<a href="${driveUrl}" style="display:flex;align-items:center;justify-content:center;width:100px;height:80px;background:#f0f1f6;border-radius:6px;color:#1a1aff;font-size:11px;font-weight:600;text-decoration:none;border:1px solid #dde0ec">&#9654; Video</a>`;}
-            else if(isVid){photoHtml+=`<div style="display:flex;align-items:center;justify-content:center;width:100px;height:80px;background:#f0f1f6;border-radius:6px;color:#888;font-size:11px">Video</div>`;}
-            else{photoHtml+=`<img src="${src}" style="width:100px;height:80px;object-fit:cover;border-radius:6px">`;}
-          });
-          photoHtml+="</div></div>";
+        const imgs=arr.filter(p=>!(typeof p==="object"&&p.type&&p.type.startsWith("video")));
+        const vids=arr.filter(p=>typeof p==="object"&&p.type&&p.type.startsWith("video"));
+        if(imgs.length||vids.length){
+          photoSection+=`<div style="margin-top:4px"><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#6b6f8a;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #eee">Service Photos (${imgs.length+vids.length})</div>`;
+          if(imgs.length){
+            photoSection+=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:10px">`;
+            imgs.forEach(p=>{const src=typeof p==="string"?p:p.data;photoSection+=`<img src="${src}" style="width:100%;height:140px;object-fit:cover;border-radius:8px;border:1px solid #eee">`;});
+            photoSection+=`</div>`;
+          }
+          if(vids.length){
+            photoSection+=`<div style="display:flex;flex-wrap:wrap;gap:8px">`;
+            vids.forEach(p=>{const url=p.driveUrl||"";photoSection+=url?`<a href="${url}" style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:160px;height:110px;background:#f0f1f6;border-radius:8px;color:#1a1aff;font-size:13px;font-weight:700;text-decoration:none;border:2px solid #1a1aff">▶ View Video</a>`:`<div style="display:flex;align-items:center;justify-content:center;width:160px;height:110px;background:#f0f1f6;border-radius:8px;color:#888;font-size:12px;border:1px solid #ddd">Video on Device</div>`;});
+            photoSection+=`</div>`;
+          }
+          photoSection+=`</div>`;
         }
       }
-      zonesHtml+=`<div style="margin-bottom:20px;border:1px solid #dde0ec;border-radius:10px;overflow:hidden"><div style="background:#12122a;color:#fff;padding:12px 16px;font-weight:700;font-size:14px">${zoneName}</div><div style="padding:16px">${refPhotos}<div style="background:#0e0e22;color:#fff;padding:8px 12px;border-radius:6px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">&#9679; Condition on Arrival</div><p style="font-size:13px;margin-bottom:4px"><strong>Condition:</strong> <span style="color:${z.condition==="Good"?"#00a550":z.condition==="Poor"?"#cc2233":"#d97000"};font-weight:700">${z.condition||"-"}</span></p>${z.condNote?'<p style="font-size:13px;margin-bottom:10px;color:#555">'+z.condNote+"</p>":""}<div style="background:#1a1aff;color:#fff;padding:8px 12px;border-radius:6px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;margin:10px 0 8px">&#9874; Service Checks</div>${hasChecks?checksHtml:"<p style='font-size:12px;color:#888'>No checks recorded</p>"}</div>${z.zoneNote?'<div style="padding:0 16px 16px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#888;margin-bottom:4px">Zone Summary</div><p style="font-size:13px;color:#333">'+z.zoneNote+"</p></div>":""}</div>${photoHtml?'<div style="padding:0 16px 16px">'+photoHtml+'</div>':""}</div>`;
+
+      zonesHtml+=`
+      <div style="margin-bottom:28px;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.07);border:1px solid #e0e0f0;page-break-inside:avoid">
+        <div style="background:#0a0a1a;color:#fff;padding:16px 22px;display:flex;align-items:center;gap:14px">
+          <div style="background:#1a1aff;color:#fff;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0">${znum}</div>
+          <div style="font-weight:700;font-size:15px;flex:1">${zoneName}</div>
+          ${z.condition?`<div style="background:${condCol(z.condition)};color:#fff;padding:4px 14px;border-radius:20px;font-size:11px;font-weight:700">${z.condition}</div>`:""}
+        </div>
+        <div style="padding:22px;background:#fff">
+          ${refSection}
+          ${scopeSection}
+          ${condSection}
+          ${checksSection}
+          ${photoSection}
+        </div>
+      </div>`;
     });
   }
+
   const win=window.open("","_blank");
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${filename}</title><style>body{font-family:Arial,sans-serif;font-size:13px;color:#12122a;max-width:740px;margin:0 auto;padding:28px}p{margin:3px 0}@media print{.no-print{display:none}body{padding:12px}}</style></head><body>`+
-    `<div style="text-align:center;margin-bottom:24px;border-bottom:3px solid #1a1aff;padding-bottom:16px"><img src="${LOGO_SRC}" style="height:52px;background:transparent"></div>`+
-    `<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px"><div><h1 style="font-size:22px;font-weight:700;margin-bottom:4px">${s.clientName}</h1><p style="color:#6b6f8a;font-size:13px">&#128205; ${s.clientAddress}</p></div><div style="text-align:right">${tags}</div></div>`+
-    `<div style="background:#f0f1f6;border-radius:10px;padding:14px 18px;margin-bottom:20px;display:grid;grid-template-columns:1fr 1fr;gap:8px"><div><p><strong>Technician:</strong> ${s.techName}${s.techMobile?" &middot; "+s.techMobile:""}</p><p><strong>Service Date:</strong> ${s.serviceDate}</p></div><div><p><strong>Follow-up Required:</strong> ${s.followup||"-"}</p>${s.calloutReason?'<p><strong>Callout:</strong> '+s.calloutReason+"</p>":""}</div></div>`+
-    (s.overallNotes?`<div style="border-left:3px solid #1a1aff;padding:10px 14px;margin-bottom:20px;background:#f8f8ff;border-radius:0 8px 8px 0"><strong>Overall Notes:</strong><br>${s.overallNotes}</div>`:"")+
-    zonesHtml+
-    `<div style="margin-top:20px;padding-top:12px;border-top:1px solid #dde0ec;display:flex;justify-content:space-between;align-items:center"><p style="font-size:11px;color:#888">Downloaded: ${now.toLocaleString("en-AU")}</p><p style="font-size:11px;color:#888">TKM9 Service &amp; Support Desk</p></div>`+
-    `<div class="no-print" style="margin-top:16px;text-align:center"><button onclick="window.print();setTimeout(()=>window.close(),500)" style="padding:12px 28px;background:#1a1aff;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:15px;font-weight:700">&#128424; Save as PDF</button></div>`+
-    `</body></html>`);
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${filename}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;color:#12122a;background:#fff}
+    @media print{
+      .no-print{display:none!important}
+      body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      .page-break{page-break-before:always}
+    }
+  </style></head><body>
+  <div style="background:#0a0a1a;padding:24px 36px;display:flex;align-items:center;justify-content:space-between">
+    <img src="${LOGO_SRC}" style="height:48px;object-fit:contain">
+    <div style="text-align:right">
+      <div style="color:rgba(255,255,255,.5);font-size:10px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px">Service Report</div>
+      <div style="color:#fff;font-size:13px;font-weight:600">${formattedDate}</div>
+    </div>
+  </div>
+  <div style="height:4px;background:linear-gradient(90deg,#1a1aff,#7744cc)"></div>
+
+  <div style="padding:30px 36px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:20px;border-bottom:2px solid #f0f0f8">
+      <div>
+        <div style="font-size:26px;font-weight:800;color:#0a0a1a;margin-bottom:5px">${s.clientName||""}</div>
+        <div style="font-size:13px;color:#6b6f8a">📍 ${s.clientAddress||""}</div>
+      </div>
+      <div style="text-align:right">${tags}</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:24px">
+      <div style="background:#f8f8ff;border-radius:10px;padding:14px 16px;border:1px solid #e8e8ff">
+        <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#1a1aff;margin-bottom:5px">Technician</div>
+        <div style="font-size:13px;font-weight:600">${s.techName||"-"}</div>
+        ${s.techMobile?`<div style="font-size:12px;color:#6b6f8a;margin-top:2px">${s.techMobile}</div>`:""}
+      </div>
+      <div style="background:#f8f8ff;border-radius:10px;padding:14px 16px;border:1px solid #e8e8ff">
+        <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#1a1aff;margin-bottom:5px">Service Date</div>
+        <div style="font-size:13px;font-weight:600">${formattedDate}</div>
+      </div>
+      <div style="background:#f8f8ff;border-radius:10px;padding:14px 16px;border:1px solid #e8e8ff">
+        <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#1a1aff;margin-bottom:5px">Follow-up Required</div>
+        <div style="font-size:14px;font-weight:700;color:${s.followup==="Yes"?"#cc2233":"#00a550"}">${s.followup||"-"}</div>
+      </div>
+    </div>
+
+    ${s.calloutReason?`<div style="background:#fff8f0;border-left:4px solid #d97000;border-radius:0 8px 8px 0;padding:14px 18px;margin-bottom:20px"><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#d97000;margin-bottom:5px">Callout Reason</div><div style="font-size:13px;color:#333">${s.calloutReason}</div>${s.calloutReporter?`<div style="font-size:12px;color:#888;margin-top:4px">Reported by: ${s.calloutReporter}</div>`:""}</div>`:""}
+
+    ${s.overallNotes?`<div style="background:#f0f8ff;border-left:4px solid #1a1aff;border-radius:0 8px 8px 0;padding:14px 18px;margin-bottom:24px"><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#1a1aff;margin-bottom:5px">Overall Notes</div><div style="font-size:13px;color:#333;line-height:1.5">${s.overallNotes}</div></div>`:""}
+
+    ${zonesHtml}
+  </div>
+
+  <div style="background:#0a0a1a;padding:16px 36px;display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+    <div style="color:rgba(255,255,255,.4);font-size:11px">Generated ${now.toLocaleString("en-AU")}</div>
+    <div style="color:rgba(255,255,255,.4);font-size:11px">TKM9 Group — Service &amp; Support Desk</div>
+  </div>
+
+  <div class="no-print" style="padding:24px;text-align:center;background:#f8f8ff;border-top:1px solid #e8e8ff">
+    <button onclick="window.print()" style="padding:14px 40px;background:#1a1aff;color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:15px;font-weight:700;letter-spacing:.02em;box-shadow:0 3px 12px rgba(26,26,255,.3)">🖨 Save as PDF</button>
+    <div style="font-size:12px;color:#888;margin-top:10px">Use your browser's print dialog and select "Save as PDF"</div>
+  </div>
+  </body></html>`);
   win.document.close();
-  win.document.title=filename;
 }
 
-function editViewPhoto(pi,zid){
-  if(currentSubIdx===null)return;
-  const s=SUBMISSIONS[currentSubIdx];
-  const arr=s.photos&&s.photos[zid]?s.photos[zid]:[];
-  const p=arr[pi];
-  const src=typeof p==="string"?p:(p.driveUrl||p.data||"");
-  if(!src)return;
-  const w=window.open("","_blank");
-  w.document.write('<html><body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh"><img src="'+src+'" style="max-width:100%;max-height:100vh;object-fit:contain"></body></html>');
-  w.document.close();
-}
-function editDeletePhoto(zid,pi){
-  if(currentSubIdx===null)return;
-  const s=SUBMISSIONS[currentSubIdx];
-  if(!s.photos||!s.photos[zid])return;
-  if(!confirm("Delete this photo?"))return;
-  s.photos[zid].splice(pi,1);
-  try{localStorage.setItem("tkm9_submissions",JSON.stringify(SUBMISSIONS));}catch(e){}
-  editSubmission();
-}
-async function editAddPhotos(e,zid){
-  if(currentSubIdx===null)return;
-  const s=SUBMISSIONS[currentSubIdx];
-  s.photos=s.photos||{};s.photos[zid]=s.photos[zid]||[];
-  const files=Array.from(e.target.files);
-  if(!files.length)return;
-  showToast("Adding "+files.length+" photo"+(files.length>1?"s":"")+"...");
-  for(const f of files){
-    const r=new FileReader();
-    await new Promise(res=>{r.onload=ev=>{
-      const item={data:ev.target.result,type:f.type,name:f.name,driveUrl:"",driveId:""};
-      s.photos[zid].push(item);
-      uploadToDrive(item,zid);
-      res();
-    };r.readAsDataURL(f);});
-  }
-  try{localStorage.setItem("tkm9_submissions",JSON.stringify(SUBMISSIONS));}catch(e){}
-  showToast("Photos added!");
-  editSubmission();
-}
 function exitAdmin(){window.location.href=window.location.pathname+"?admin";}
 function esc(s){return(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
 function downloadFile(){
