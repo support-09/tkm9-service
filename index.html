@@ -450,7 +450,7 @@ function mkZBody(z){
   h+=`<label>Overall Condition</label><div class="cr" id="cond-${z.id}"><button class="cb" data-val="Good" onclick="setCond('${z.id}','Good')">Good</button><button class="cb" data-val="Medium" onclick="setCond('${z.id}','Medium')">Medium</button><button class="cb" data-val="Poor" onclick="setCond('${z.id}','Poor')">Poor</button></div>`;
   h+=`<div class="field"><label>Condition Comments (optional)</label><textarea id="cn-${z.id}" oninput="sf('${z.id}','condNote',this.value)"></textarea></div>`;
   h+='<div class="sh">Photos &amp; Video — Before Service</div>';
-  h+=`<div class="pa-btns"><div class="pa-btn"><input type="file" id="pi-cam-${z.id}" accept="image/*,video/*" capture="environment" multiple>&#128247; Take Photo/Video</div><div class="pa-btn"><input type="file" id="pi-lib-${z.id}" accept="image/*,video/*" multiple>&#128248; Choose from Library</div></div>`;
+  h+=`<div class="pa-btns"><div class="pa-btn"><input type="file" id="pi-cam-${z.id}" accept="image/*,video/*" capture="environment">&#128247; Take Photo/Video</div><div class="pa-btn"><input type="file" id="pi-lib-${z.id}" accept="image/*,video/*" multiple>&#128248; Choose from Library</div></div>`;
   h+=`<div class="upload-prog" id="uprog-${z.id}"><div class="upload-prog-fill" id="uprog-fill-${z.id}" style="width:0%"></div></div>`;
   h+=`<div class="pg" id="pg-${z.id}"></div>`;
   h+='<div class="svc-banner">&#9874;&#65039; Service Checks</div>';
