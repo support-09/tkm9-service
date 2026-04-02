@@ -81,7 +81,7 @@ textarea{resize:vertical;min-height:78px}
 .zh.open .zchev{transform:rotate(90deg)}
 .zb{display:none;background:var(--sur);border:1.5px solid var(--blue);border-top:none;border-radius:0 0 var(--rad) var(--rad);padding:18px}
 .zb.open{display:block}
-.pa-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.pa-btns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px}
 .pa-btn{padding:13px 8px;border:1.5px solid var(--bor);border-radius:var(--rsm);background:var(--su2);color:var(--txt);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;text-align:center;transition:all .15s;position:relative;overflow:hidden}
 .pa-btn:hover{border-color:var(--blue);background:var(--bl)}
 .pa-btn input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
@@ -431,7 +431,7 @@ function buildZones(){
     const w=document.createElement("div");w.className="zw";
     w.innerHTML=`<div class="zh" id="zh-${z.id}" onclick="toggleZ('${z.id}')"><div class="znum" id="znum-${z.id}">${i+1}</div><div class="ztitle">${z.name}</div><div class="zbadge pend" id="zbadge-${z.id}">Pending</div><div class="zchev">&#8250;</div></div><div class="zb" id="zb-${z.id}">${mkZBody(z)}</div>`;
     con.appendChild(w);
-    ["pi-cam-"+z.id,"pi-lib-"+z.id].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener("change",e=>handlePhotos(e,z.id));});
+    ["pi-cam-"+z.id,"pi-vid-"+z.id,"pi-lib-"+z.id].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener("change",e=>handlePhotos(e,z.id));});
   });
 }
 
@@ -450,7 +450,7 @@ function mkZBody(z){
   h+=`<label>Overall Condition</label><div class="cr" id="cond-${z.id}"><button class="cb" data-val="Good" onclick="setCond('${z.id}','Good')">Good</button><button class="cb" data-val="Medium" onclick="setCond('${z.id}','Medium')">Medium</button><button class="cb" data-val="Poor" onclick="setCond('${z.id}','Poor')">Poor</button></div>`;
   h+=`<div class="field"><label>Condition Comments (optional)</label><textarea id="cn-${z.id}" oninput="sf('${z.id}','condNote',this.value)"></textarea></div>`;
   h+='<div class="sh">Photos &amp; Video — Before Service</div>';
-  h+=`<div class="pa-btns"><div class="pa-btn"><input type="file" id="pi-cam-${z.id}" accept="image/*,video/*" capture="environment">&#128247; Take Photo/Video</div><div class="pa-btn"><input type="file" id="pi-lib-${z.id}" accept="image/*,video/*" multiple>&#128248; Choose from Library</div></div>`;
+  h+=`<div class="pa-btns"><div class="pa-btn"><input type="file" id="pi-cam-${z.id}" accept="image/*" capture="environment">&#128247; Take Photo</div><div class="pa-btn"><input type="file" id="pi-vid-${z.id}" accept="video/*" capture="environment">&#127909; Record Video</div><div class="pa-btn"><input type="file" id="pi-lib-${z.id}" accept="image/*,video/*" multiple>&#128248; From Library</div></div>`;
   h+=`<div class="upload-prog" id="uprog-${z.id}"><div class="upload-prog-fill" id="uprog-fill-${z.id}" style="width:0%"></div></div>`;
   h+=`<div class="pg" id="pg-${z.id}"></div>`;
   h+='<div class="svc-banner">&#9874;&#65039; Service Checks</div>';
