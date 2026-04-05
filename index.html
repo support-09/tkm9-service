@@ -562,7 +562,7 @@ function buildReview(){
 
 async function submitReport(){
   const btn=document.getElementById("btn-next");btn.innerHTML='<span class="spin"></span>Submitting...';btn.disabled=true;
-  const sub={id:"sub_"+Date.now(),timestamp:new Date().toISOString(),clientSlug:S.slug,clientName:S.client.name,clientAddress:S.client.address,techName:S.techName,techMobile:S.techMobile,serviceDate:S.serviceDate,serviceType:S.serviceType,serviceTypes:S.serviceTypes,calloutReason:S.calloutReason,calloutReporter:S.calloutReporter,overallNotes:document.getElementById("overall-notes").value,followup:S.followup,zoneData:JSON.parse(JSON.stringify(S.zoneData)),photos:JSON.parse(JSON.stringify(S.photos)),photoCount:Object.values(S.photos).flat().length,driveFolderUrl:S.driveFolderUrl||""};
+  const sub={id:"sub_"+Date.now(),timestamp:new Date().toISOString(),clientSlug:S.slug,clientName:S.client.name,clientAddress:S.client.address,techName:S.techName,techMobile:S.techMobile,serviceDate:S.serviceDate,serviceType:S.serviceType,serviceTypes:S.serviceTypes,calloutReason:S.calloutReason,calloutReporter:S.calloutReporter,overallNotes:document.getElementById("overall-notes").value,followup:S.followup,zoneData:JSON.parse(JSON.stringify(S.zoneData)),photos:JSON.parse(JSON.stringify(S.photos)),afterPhotos:JSON.parse(JSON.stringify(S.afterPhotos||{})),photoCount:Object.values(S.photos).flat().length,driveFolderUrl:S.driveFolderUrl||""};
   SUBMISSIONS.unshift(sub);
   try{localStorage.setItem("tkm9_submissions",JSON.stringify(SUBMISSIONS));}catch(e){}
   if(APPS_SCRIPT_URL){
@@ -1081,7 +1081,9 @@ function downloadSubPDF(){
     });
   }
 
-  const win=window.open("","_blank");
+  // Debug: log what we have
+console.log("PDF zoneData:",s.zoneData,"clientResolved:",clientResolved?.name,"keys:",s.zoneData?Object.keys(s.zoneData):[]);
+const win=window.open("","_blank");
   win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${filename}</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
