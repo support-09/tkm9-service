@@ -976,7 +976,7 @@ function deleteSubmission(){
 
 function downloadSubPDF(){
   if(currentSubIdx===null)return;
-  const s=SUBMISSIONS[currentSubIdx];
+  let s=SUBMISSIONS[currentSubIdx];
   const client=CLIENTS[s.clientSlug];
   if(client&&client.zones){client.zones.forEach((z,i)=>{if(!z.id)z.id="z"+(i+1);});}
   const now=new Date();
