@@ -267,7 +267,7 @@ textarea{resize:vertical;min-height:78px}
 <div id="admin-wrap">
   <div id="admin-login-view">
     <div class="admin-login">
-      <img src="https://raw.githubusercontent.com/support-09/tkm9-service/main/Supportdesk_signature_email-08.png" style="height:44px;margin-bottom:20px">
+      <img src="https://raw.githubusercontent.com/support-09/tkm9-service/main/SUPPORTHEADER_freshdesk_headphone-05-05.png" style="height:44px;margin-bottom:20px">
       <div style="font-size:22px;font-weight:700;margin-bottom:8px">Admin Panel</div>
       <div style="font-size:14px;color:var(--mut);margin-bottom:24px">TKM9 Service &amp; Support Desk</div>
       <div style="width:100%;max-width:320px">
@@ -280,7 +280,7 @@ textarea{resize:vertical;min-height:78px}
 
   <div id="admin-main-view" style="display:none">
     <div class="admin-hdr">
-      <img src="https://raw.githubusercontent.com/support-09/tkm9-service/main/Supportdesk_signature_email-08.png" style="height:34px;cursor:pointer" onclick="showTab('clients')" title="Back to client list">
+      <img src="https://raw.githubusercontent.com/support-09/tkm9-service/main/SUPPORTHEADER_freshdesk_headphone-05-05.png" style="height:34px;cursor:pointer" onclick="showTab('clients')" title="Back to client list">
       <h1>Service Reports</h1>
       <button class="admin-home-btn" onclick="exitAdmin()">&#127968; Home</button>
     </div>
@@ -370,7 +370,7 @@ let adminLoggedIn=sessionStorage.getItem("tkm9_admin")==="1";
 let currentSubIdx=null;
 
 let S={};
-function initS(){S={screen:1,slug:"",client:null,techName:"",techMobile:"",serviceDate:"",serviceType:"",serviceTypes:[],calloutReason:"",calloutReporter:"",zoneData:{},photos:{},driveFolderUrl:"",overallNotes:"",followup:"",ack:false};}
+function initS(){S={screen:1,slug:"",client:null,techName:"",techMobile:"",serviceDate:"",serviceType:"",serviceTypes:[],calloutReason:"",calloutReporter:"",zoneData:{},photos:{},afterPhotos:{},driveFolderId:"",driveFolderUrl:"",overallNotes:"",followup:"",ack:false};}
 initS();
 
 document.addEventListener("DOMContentLoaded",()=>{
@@ -431,7 +431,7 @@ function buildZones(){
     const w=document.createElement("div");w.className="zw";
     w.innerHTML=`<div class="zh" id="zh-${z.id}" onclick="toggleZ('${z.id}')"><div class="znum" id="znum-${z.id}">${i+1}</div><div class="ztitle">${z.name}</div><div class="zbadge pend" id="zbadge-${z.id}">Pending</div><div class="zchev">&#8250;</div></div><div class="zb" id="zb-${z.id}">${mkZBody(z)}</div>`;
     con.appendChild(w);
-    ["pi-cam-"+z.id,"pi-vid-"+z.id,"pi-lib-"+z.id].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener("change",e=>handlePhotos(e,z.id));});
+    ["pi-cam-"+z.id,"pi-vid-"+z.id,"pi-lib-"+z.id].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener("change",e=>handlePhotos(e,z.id));});["pia-cam-"+z.id,"pia-vid-"+z.id,"pia-lib-"+z.id].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener("change",e=>handleAfterPhotos(e,z.id));});
   });
 }
 
@@ -462,7 +462,7 @@ function mkZBody(z){
   if(z.hasSound&&z.soundItems&&z.soundItems.length){h+=`<div class="sh">Sound</div><div class="sbox">Items to check: <strong>${z.soundItems.join(", ")}</strong></div>`;h+=yn(z.id,"soundOk","Sound working on ALL items?");h+=yn(z.id,"volumeOk","Volume level adequate?");}
   if(z.hasLight&&z.lightItems&&z.lightItems.length){h+=`<div class="sh">Lighting</div><div class="sbox">Items to check: <strong>${z.lightItems.join(", ")}</strong></div>`;h+=yn(z.id,"lightOk","Lighting working on ALL items?");}
   if(z.hasOther&&z.otherItems&&z.otherItems.length){h+=`<div class="sh">Other</div><div class="sbox">Items to check: <strong>${z.otherItems.join(", ")}</strong></div>`;h+=yn(z.id,"otherOk","All other items checked and OK?");}
-  h+=`<div class="sh">Zone Summary</div><div class="field"><label>Summary / Items to Flag</label><textarea id="zn-${z.id}" oninput="sf('${z.id}','zoneNote',this.value)"></textarea></div>`;
+  h+=`<div class="sh">Zone Summary</div><div class="field"><label>Summary / Items to Flag</label><textarea id="zn-${z.id}" oninput="sf('${z.id}','zoneNote',this.value)"></textarea></div>`;h+='<div class="sh">Photos &amp; Video — After Service</div>';h+=`<div class="pa-btns"><div class="pa-btn"><input type="file" id="pia-cam-${z.id}" accept="image/*" capture="environment">&#128247; Take Photo</div><div class="pa-btn"><input type="file" id="pia-vid-${z.id}" accept="video/*" capture="environment">&#127909; Record Video</div><div class="pa-btn"><input type="file" id="pia-lib-${z.id}" accept="image/*,video/*" multiple>&#128248; From Library</div></div>`;h+=`<div class="pg" id="pga-${z.id}"></div>`;
   h+=`<button class="mdb" onclick="markDone('${z.id}')">Mark Zone Complete &#10003;</button>`;
   return h;
 }
@@ -498,6 +498,28 @@ async function handlePhotos(e,zid){
   setTimeout(()=>{if(prog)prog.style.display="none";},1000);
 }
 
+function renderAfterGrid(zid){
+  const g=document.getElementById("pga-"+zid);if(!g)return;
+  S.afterPhotos=S.afterPhotos||{};
+  g.innerHTML=(S.afterPhotos[zid]||[]).map((item,i)=>{
+    const src=item.data||item;
+    const isVid=item.type&&item.type.startsWith("video");
+    return `<div class="pt">${isVid?`<video style="width:100%;height:100%;object-fit:cover"><source src="${src}"></video>`:`<img src="${src}" alt="">`}<button class="pdel" onclick="delAfterPhoto('${zid}',${i})">&#215;</button></div>`;
+  }).join("");
+}
+function delAfterPhoto(zid,i){S.afterPhotos[zid].splice(i,1);renderAfterGrid(zid);}
+async function handleAfterPhotos(e,zid){
+  const files=Array.from(e.target.files);if(!files.length)return;
+  S.afterPhotos=S.afterPhotos||{};S.afterPhotos[zid]=S.afterPhotos[zid]||[];
+  for(const f of files){
+    const r=new FileReader();
+    await new Promise(res=>{r.onload=ev=>{
+      const item={data:ev.target.result,type:f.type,name:f.name,driveUrl:"",driveId:""};
+      S.afterPhotos[zid].push(item);renderAfterGrid(zid);res();
+    };r.readAsDataURL(f);});
+    uploadToDrive(S.afterPhotos[zid][S.afterPhotos[zid].length-1],zid);
+  }
+}
 async function uploadToDrive(item,zid){
   if(!APPS_SCRIPT_URL||!item.data)return;
   try{
@@ -1128,7 +1150,7 @@ const win=window.open("","_blank");
       <div style="text-align:right">${tags}</div>
     </div>
 
-    ${clientResolved&&clientResolved.mapEmbed?`<div style="margin-bottom:20px;border-radius:10px;overflow:hidden;border:1px solid #e0e0f0;height:160px"><iframe src="${clientResolved.mapEmbed}" width="100%" height="160" style="border:none;display:block;filter:saturate(.8)" loading="lazy"></iframe></div>`:""}
+    ${clientResolved&&clientResolved.address?`<div style="margin-bottom:20px;border-radius:10px;border:1px solid #e0e0f0;overflow:hidden"><a href="https://maps.google.com/maps?q=${encodeURIComponent(clientResolved.address)}" target="_blank" style="display:block;background:#f0f4ff;padding:14px 18px;text-decoration:none;display:flex;align-items:center;gap:12px"><span style="font-size:22px">📍</span><div><div style="font-size:12px;font-weight:700;color:#1a1aff;margin-bottom:2px">Location</div><div style="font-size:13px;color:#333">${clientResolved.address}</div><div style="font-size:11px;color:#1a1aff;margin-top:3px">View on Google Maps ↗</div></div></a></div>`:""}
 
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:24px">
       <div style="background:#f8f8ff;border-radius:10px;padding:14px 16px;border:1px solid #e8e8ff">
