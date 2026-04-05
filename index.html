@@ -1049,6 +1049,8 @@ function downloadSubPDF(){
   // Find client by slug OR by name (in case slug was stored as name)
   const clientResolved=client||(Object.values(CLIENTS).find(c=>c.name===s.clientName))||null;
   if(clientResolved&&clientResolved.zones){clientResolved.zones.forEach((z,i)=>{if(!z.id)z.id="z"+(i+1);});}
+  // Parse zoneData if stored as JSON string (from Google Sheet submissions)
+  if(typeof s.zoneData==="string"){try{s.zoneData=JSON.parse(s.zoneData);}catch(e){s.zoneData={};}}
   if(s.zoneData){
     Object.entries(s.zoneData).forEach(([zid,z])=>{
       const znum=zid.replace("z","");
@@ -1207,6 +1209,7 @@ function downloadSubPDF(){
     ${s.overallNotes?`<div style="background:#f0f8ff;border-left:4px solid #1a1aff;border-radius:0 8px 8px 0;padding:14px 18px;margin-bottom:24px"><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#1a1aff;margin-bottom:5px">Overall Notes</div><div style="font-size:13px;color:#333;line-height:1.5">${s.overallNotes}</div></div>`:""}
 
     ${(()=>{
+      if(typeof s.zoneData==="string"){try{s.zoneData=JSON.parse(s.zoneData);}catch(e){s.zoneData={};}}
       const totalZones=s.zoneData?Object.keys(s.zoneData).length:0;
       const goodZones=s.zoneData?Object.values(s.zoneData).filter(z=>z.condition==="Good").length:0;
       const medZones=s.zoneData?Object.values(s.zoneData).filter(z=>z.condition==="Medium").length:0;
