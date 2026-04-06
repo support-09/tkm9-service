@@ -586,7 +586,18 @@ async function submitReport(){
   const btn=document.getElementById("btn-next");btn.innerHTML='<span class="spin"></span>Submitting...';btn.disabled=true;
   const sub={id:"sub_"+Date.now(),timestamp:new Date().toISOString(),clientSlug:S.slug,clientName:S.client.name,clientAddress:S.client.address,techName:S.techName,techMobile:S.techMobile,serviceDate:S.serviceDate,serviceType:S.serviceType,serviceTypes:S.serviceTypes,calloutReason:S.calloutReason,calloutReporter:S.calloutReporter,overallNotes:document.getElementById("overall-notes").value,followup:S.followup,zoneData:JSON.parse(JSON.stringify(S.zoneData)),photos:JSON.parse(JSON.stringify(S.photos)),afterPhotos:JSON.parse(JSON.stringify(S.afterPhotos||{})),photoCount:Object.values(S.photos).flat().length,driveFolderUrl:S.driveFolderUrl||""};
   SUBMISSIONS.unshift(sub);
-  try{localStorage.setItem("tkm9_submissions",JSON.stringify(SUBMISSIONS));}catch(e){}
+  // Strip base64 .data from photos before saving to localStorage (avoids 5MB quota bust)
+  // Photos are accessible via driveUrl after upload; base64 is only needed for display before upload
+  const subsToSave=SUBMISSIONS.map(s2=>{
+    const copy={...s2};
+    if(copy.photos){copy.photos={};Object.entries(s2.photos).forEach(([zid,arr])=>{copy.photos[zid]=(Array.isArray(arr)?arr:[]).map(p=>typeof p==="object"?{...p,data:undefined}:p);});}
+    if(copy.afterPhotos){copy.afterPhotos={};Object.entries(s2.afterPhotos||{}).forEach(([zid,arr])=>{copy.afterPhotos[zid]=(Array.isArray(arr)?arr:[]).map(p=>typeof p==="object"?{...p,data:undefined}:p);});}
+    return copy;
+  });
+  try{localStorage.setItem("tkm9_submissions",JSON.stringify(subsToSave));}catch(e){
+    // If still too large, save without photos at all
+    try{localStorage.setItem("tkm9_submissions",JSON.stringify(subsToSave.map(s2=>({...s2,photos:{},afterPhotos:{}}))));}catch(e2){}
+  }
   if(APPS_SCRIPT_URL){
     try{
       const payload={...sub,photos:undefined,afterPhotos:undefined,zoneData:JSON.stringify(sub.zoneData),type:"submission"};
@@ -1095,17 +1106,35 @@ function downloadSubPDF(){
         </div>
       </div>`;
 
-      // Service checks
+      // Service checks — show ALL applicable checks for this zone type
       let checksSection="";
-      const checksToShow=Object.entries(checkLabels).filter(([k])=>z[k]);
-      if(checksToShow.length){
-        checksSection+=`<div style="margin-bottom:20px"><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#6b6f8a;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #eee">Service Checks</div>`;
-        checksSection+=`<table style="width:100%;border-collapse:collapse">`;
-        checksToShow.forEach(([k,label])=>{
-          checksSection+=`<tr><td style="padding:7px 10px;border-bottom:1px solid #f4f4f8;font-size:12px;color:#333;width:85%">${label}</td><td style="padding:7px 10px;border-bottom:1px solid #f4f4f8;text-align:right"><span style="background:${ynBg(z[k])};color:${ynCol(z[k])};font-weight:700;font-size:11px;padding:3px 10px;border-radius:20px">${ynIcon(z[k])} ${z[k]}</span></td></tr>`;
-        });
-        checksSection+=`</table></div>`;
+      // Determine which checks apply to this zone
+      const applicableKeys=[];
+      if(zoneData?.isProjection){applicableKeys.push(...["projOn","motionOk","soundCalib","equipClean"]);}
+      if(zoneData?.isSpecial){applicableKeys.push(...["deadPixels","colourOk","soundCalib2","animalsWorking","animalsPresent"]);}
+      if(zoneData?.isServerRoom){applicableKeys.push(...["airflow","noClutter","signalOk"]);}
+      if(!zoneData?.isServerRoom&&!zoneData?.isProjection&&!zoneData?.isSpecial){
+        if(zoneData?.hasScreens||!zoneData){applicableKeys.push(...["touchOk","cameraOk"]);}
+        applicableKeys.push(...["cracks","fixings","ventBlocked","dirtyCorners","hotItems","cablesOk","dustInternal"]);
       }
+      if((zoneData?.hasSound||!zoneData)&&!zoneData?.isProjection&&!zoneData?.isSpecial){applicableKeys.push(...["soundOk","volumeOk"]);}
+      if(zoneData?.hasLight&&!zoneData?.isProjection&&!zoneData?.isSpecial){applicableKeys.push("lightOk");}
+      if(zoneData?.hasOther){applicableKeys.push("otherOk");}
+      // If no zone config, fall back to all known checks that have a value
+      const keysToRender=applicableKeys.length>0?applicableKeys:Object.keys(checkLabels);
+      checksSection+=`<div style="margin-bottom:20px"><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#6b6f8a;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #eee">Service Checks</div>`;
+      checksSection+=`<table style="width:100%;border-collapse:collapse">`;
+      keysToRender.forEach(k=>{
+        const label=checkLabels[k];if(!label)return;
+        const val=z[k]||"";
+        const recorded=val==="Yes"||val==="No";
+        const bg=recorded?(val==="Yes"?"#e6f7ef":"#ffebee"):"#f4f4f8";
+        const col=recorded?(val==="Yes"?"#00a550":"#cc2233"):"#aaa";
+        const icon=recorded?(val==="Yes"?"✓":"✗"):"—";
+        const display=recorded?val:"Not recorded";
+        checksSection+=`<tr><td style="padding:7px 10px;border-bottom:1px solid #f4f4f8;font-size:12px;color:#333;width:85%">${label}</td><td style="padding:7px 10px;border-bottom:1px solid #f4f4f8;text-align:right"><span style="background:${bg};color:${col};font-weight:700;font-size:11px;padding:3px 10px;border-radius:20px">${icon} ${display}</span></td></tr>`;
+      });
+      checksSection+=`</table></div>`;
 
       // Photo grid helper
       function photoGrid(arr,label){
@@ -1179,7 +1208,7 @@ const win=window.open("","_blank");
       <div style="text-align:right">${tags}</div>
     </div>
 
-    ${clientResolved&&clientResolved.address?`<div style="margin-bottom:20px;border-radius:10px;border:1px solid #e0e0f0;overflow:hidden"><a href="https://maps.google.com/maps?q=${encodeURIComponent(clientResolved.address)}" target="_blank" style="display:block;background:#f0f4ff;padding:14px 18px;text-decoration:none;display:flex;align-items:center;gap:12px"><span style="font-size:22px">📍</span><div><div style="font-size:12px;font-weight:700;color:#1a1aff;margin-bottom:2px">Location</div><div style="font-size:13px;color:#333">${clientResolved.address}</div><div style="font-size:11px;color:#1a1aff;margin-top:3px">View on Google Maps ↗</div></div></a></div>`:""}
+    ${clientResolved&&clientResolved.address?`<div style="margin-bottom:20px;border-radius:10px;overflow:hidden;border:1px solid #e0e0f0"><img src="https://staticmap.openstreetmap.de/staticmap.php?center=${encodeURIComponent(clientResolved.address)}&zoom=15&size=760x160&maptype=mapnik&markers=${encodeURIComponent(clientResolved.address)},red-pushpin" style="width:100%;height:160px;object-fit:cover;display:block" onerror="this.outerHTML='<div style=&quot;background:#f0f4ff;padding:14px 18px;display:flex;align-items:center;gap:12px&quot;><span style=&quot;font-size:20px&quot;>📍</span><div><div style=&quot;font-weight:700;font-size:12px;color:#1a1aff&quot;>Location</div><div style=&quot;font-size:13px&quot;>${clientResolved.address.replace(/'/g,"\'")}</div></div></div>'"><div style="background:#f0f4ff;padding:8px 14px;font-size:11px;color:#1a1aff;border-top:1px solid #e0e0f0">📍 ${clientResolved.address} — <a href=&quot;https://maps.google.com/maps?q=${encodeURIComponent(clientResolved.address)}&quot; target=&quot;_blank&quot; style=&quot;color:#1a1aff&quot;>Open in Google Maps ↗</a></div></div>`:""}
 
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:24px">
       <div style="background:#f8f8ff;border-radius:10px;padding:14px 16px;border:1px solid #e8e8ff">
