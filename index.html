@@ -292,7 +292,7 @@ textarea{resize:vertical;min-height:78px}
 
     <div id="tab-clients-content">
       <div class="asec">
-        <h3>Active Clients (24)</h3>
+        <h3 id="client-count-hdr">Active Clients</h3>
         <input type="text" id="admin-search" placeholder="&#128269; Search clients..." style="margin-bottom:12px" oninput="renderClientList()">
         <div id="client-list-admin"></div>
         <button class="savebtn" style="margin-top:12px;background:var(--sur);color:var(--blue);border:1.5px solid var(--blue);box-shadow:none" onclick="startNewClient()">+ Add New Client</button>
@@ -638,6 +638,8 @@ function checkPW(){
   }else{document.getElementById("pw-err").style.display="block";}
 }
 function renderClientList(){
+  const hdr=document.getElementById("client-count-hdr");
+  if(hdr)hdr.textContent="Active Clients ("+Object.keys(CLIENTS).length+")";
   const el=document.getElementById("client-list-admin");
   const q=(document.getElementById("admin-search")?.value||"").toLowerCase();
   const slugs=Object.keys(CLIENTS).filter(s=>!q||CLIENTS[s].name.toLowerCase().includes(q)||s.includes(q));
@@ -862,6 +864,24 @@ function viewSubmission(i){
       }
     });
   }
+  // After-service photos in admin view
+  if(s.afterPhotos){
+    Object.entries(s.afterPhotos).forEach(([zid,photos])=>{
+      const arr=Array.isArray(photos)?photos:[];
+      if(arr.length){
+        html+=`<hr style="border-color:var(--bor);margin:10px 0"><div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--grn);margin-bottom:8px">Zone ${zid.replace("z","")} — After Service Photos</div><div style="display:flex;flex-wrap:wrap;gap:6px">`;
+        arr.forEach(p=>{
+          const src=typeof p==="string"?p:p.data;
+          const driveUrl=typeof p==="object"&&p.driveUrl?p.driveUrl:"";
+          const isVid=typeof p==="object"&&p.type&&p.type.startsWith("video");
+          if(driveUrl){html+=`<a href="${driveUrl}" target="_blank"><img src="${typeof p==="object"&&p.thumbUrl?p.thumbUrl:src}" style="width:80px;height:60px;object-fit:cover;border-radius:6px"></a>`;}
+          else if(isVid){html+=`<div style="display:flex;align-items:center;justify-content:center;width:80px;height:60px;background:var(--su2);border-radius:6px;font-size:11px;color:var(--grn);font-weight:600">▶ After</div>`;}
+          else if(src){html+=`<img src="${src}" style="width:80px;height:60px;object-fit:cover;border-radius:6px">`;}
+        });
+        html+="</div>";
+      }
+    });
+  }
   document.getElementById("sub-detail-content").innerHTML=html;
   document.getElementById("subs-list-panel").style.display="none";
   document.getElementById("sub-detail-panel").style.display="block";
@@ -1030,6 +1050,15 @@ function downloadSubPDF(){
   if(!sCopy.zoneData||typeof sCopy.zoneData!=="object"||Array.isArray(sCopy.zoneData)){sCopy.zoneData={};}
   // Rebind s to the clean copy for the PDF builder below
   s=sCopy;
+  // Fallback: if zoneData is empty but client has zones, synthesise shells
+  // so the PDF always shows zone structure (ref photos, scope, empty checks)
+  if(clientResolved&&clientResolved.zones&&(!s.zoneData||!Object.keys(s.zoneData).length)){
+    s.zoneData={};
+    clientResolved.zones.forEach((z,i)=>{
+      const zid=z.id||("z"+(i+1));
+      s.zoneData[zid]={completed:false};
+    });
+  }
   if(s.zoneData&&Object.keys(s.zoneData).length){
     Object.entries(s.zoneData).forEach(([zid,z])=>{
       const znum=zid.replace("z","");
