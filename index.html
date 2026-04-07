@@ -862,21 +862,18 @@ function renderSubmissions(){
       const localMap={};
       SUBMISSIONS.forEach(s=>{if(s.id)localMap[s.id]=s;});
       data.submissions.forEach(s=>{
-        // Parse zoneData from string if Sheet stored it that way
-        if(typeof s.zoneData==="string"){try{s.zoneData=JSON.parse(s.zoneData);}catch(e){s.zoneData={};}}
         if(localMap[s.id]){
+          // Submission exists locally — local is always truth. Never overwrite.
+          // Only fill zoneData if local has none and Sheet has it
+          if(typeof s.zoneData==="string"){try{s.zoneData=JSON.parse(s.zoneData);}catch(e){s.zoneData={};}}
           const local=localMap[s.id];
-          // Sheet submission has zoneData but local doesn't — take Sheet's zoneData
           if((!local.zoneData||!Object.keys(local.zoneData).length)&&s.zoneData&&Object.keys(s.zoneData).length){
             local.zoneData=s.zoneData;
           }
-          // Always keep local photos (they have base64/driveUrl); Sheet never has photos
-          // Update basic fields from Sheet only if local is missing them
-          if(!local.techName&&s.techName)local.techName=s.techName;
-          if(!local.serviceDate&&s.serviceDate)local.serviceDate=s.serviceDate;
         } else {
-          // New submission from Sheet not in local — add it
-          SUBMISSIONS.unshift(s);localMap[s.id]=s;
+          // New submission from Sheet not in local — parse and add it
+          if(typeof s.zoneData==="string"){try{s.zoneData=JSON.parse(s.zoneData);}catch(e){s.zoneData={};}}
+          SUBMISSIONS.push(s);localMap[s.id]=s;
         }
       });
       safeLocalSave();
@@ -898,8 +895,11 @@ function renderSubmissionsList(){
   const visible=SUBMISSIONS.slice(0,_subsShowing);
   const rows=visible.map((s,i)=>{
     const d=new Date(s.timestamp);
-    const tags=(s.serviceTypes||[s.serviceType]).map(t=>`<span class="tag ${tagMap[t]||"tq1"}">${t}</span>`).join(" ");
-    return `<div class="sub-item" onclick="viewSubmission(${i})"><strong>${s.clientName}</strong> &mdash; ${tags}<div class="sub-meta">${s.techName} &middot; ${d.toLocaleDateString("en-AU")} ${d.toLocaleTimeString("en-AU",{hour:"2-digit",minute:"2-digit"})}</div></div>`;
+    const isValidDate=!isNaN(d.getTime());
+    const dateStr=isValidDate?d.toLocaleDateString("en-AU")+" "+d.toLocaleTimeString("en-AU",{hour:"2-digit",minute:"2-digit"}):s.serviceDate||"";
+    const types=s.serviceTypes&&s.serviceTypes.length?s.serviceTypes:(s.serviceType?s.serviceType.split(" + "):[]);
+    const tags=types.filter(Boolean).map(t=>`<span class="tag ${tagMap[t]||"tq1"}">${t}</span>`).join(" ");
+    return `<div class="sub-item" onclick="viewSubmission(${i})"><strong>${s.clientName||"Unknown client"}</strong>${tags?" &mdash; "+tags:""}<div class="sub-meta">${s.techName||"Unknown tech"} &middot; ${dateStr}</div></div>`;
   }).join("");
   const remaining=SUBMISSIONS.length-_subsShowing;
   const moreBtn=remaining>0?`<div style="padding:10px 0;text-align:center"><button onclick="_subsShowing+=10;renderSubmissionsList()" style="background:var(--su2);border:1.5px solid var(--bor);border-radius:var(--rsm);padding:9px 20px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:var(--mut);cursor:pointer">Show ${Math.min(remaining,10)} more (${remaining} remaining)</button></div>`:"";
@@ -990,18 +990,17 @@ function editSubmission(){
   html+=`<div class="field"><label>Callout Reason</label><input type="text" id="edit-calloutReason" value="${esc(s.calloutReason||'')}"></div>`;
   html+=`<div class="field"><label>Reported By</label><input type="text" id="edit-calloutReporter" value="${esc(s.calloutReporter||'')}"></div>`;
   html+=`<div class="field"><label>Overall Notes</label><textarea id="edit-overallNotes">${esc(s.overallNotes||'')}</textarea></div>`;
-  // Build editable zoneData: use saved data, or fall back to client zones if empty
+  // Build editable zoneData from a safe copy — never mutate s directly
   const editClient=CLIENTS[s.clientSlug]||(Object.values(CLIENTS).find(c=>c.name===s.clientName))||null;
   if(editClient&&editClient.zones){editClient.zones.forEach((z,i)=>{if(!z.id)z.id="z"+(i+1);});}
-  if(!s.zoneData||typeof s.zoneData!=="object"||Array.isArray(s.zoneData)||!Object.keys(s.zoneData).length){
-    // No saved zoneData — create shells from client zone config
-    s.zoneData={};
-    if(editClient&&editClient.zones){editClient.zones.forEach((z,i)=>{s.zoneData[z.id||"z"+(i+1)]={completed:false};});}
+  let editZoneData=s.zoneData&&typeof s.zoneData==="object"&&!Array.isArray(s.zoneData)&&Object.keys(s.zoneData).length?JSON.parse(JSON.stringify(s.zoneData)):{};
+  if(!Object.keys(editZoneData).length&&editClient&&editClient.zones){
+    editClient.zones.forEach((z,i)=>{editZoneData[z.id||"z"+(i+1)]={completed:false};});
   }
-  if(s.zoneData&&Object.keys(s.zoneData).length){
+  if(Object.keys(editZoneData).length){
     html+='<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--blue);margin:14px 0 8px">Zones</div>';
     const client=editClient;
-    Object.entries(s.zoneData).forEach(([zid,z])=>{
+    Object.entries(editZoneData).forEach(([zid,z])=>{
       const znum=zid.replace("z","");
       const zoneName=client?.zones?.find(z2=>z2.id===zid)?.name||client?.zones?.[parseInt(znum)-1]?.name||"Zone "+znum;
       const checks={"touchOk":"Touch Working","cameraOk":"Camera Secure","cracks":"Visual Cracks/Damage","fixings":"All Fixings Secure","ventBlocked":"Ventilation Clear","dirtyCorners":"Screen Corners Clean","hotItems":"No Hot Items","cablesOk":"All Cables Secure","dustInternal":"No Internal Dust","soundOk":"Sound Working","volumeOk":"Volume Adequate","lightOk":"Lighting Working","projOn":"Projection Aligned","motionOk":"Motion Sensors OK","soundCalib":"Sound Calibrated","equipClean":"Equipment Clean","airflow":"Airflow OK","noClutter":"No Clutter","signalOk":"Signal OK"};
@@ -1145,17 +1144,37 @@ function downloadSubPDF(){
   if(!sCopy.zoneData||typeof sCopy.zoneData!=="object"||Array.isArray(sCopy.zoneData)){sCopy.zoneData={};}
   // Rebind s to the clean copy for the PDF builder below
   s=sCopy;
-  // Merge in-memory session data (full-res photos + zoneData) — always wins over localStorage
+  // Restore zoneData from session if stored version is empty (zoneData is small, always survives storage)
+  // Photos: use stored version (has driveId) — Drive is the cross-session source of truth
   if(SESSION_PHOTOS[s.id]){
     const sp=SESSION_PHOTOS[s.id];
-    if(sp.photos&&Object.keys(sp.photos).length)s.photos=sp.photos;
-    if(sp.afterPhotos&&Object.keys(sp.afterPhotos).length)s.afterPhotos=sp.afterPhotos;
-    // Also restore zoneData from session if the stored version lost data
+    // zoneData: session wins if stored is empty
     if(sp.zoneData&&Object.keys(sp.zoneData).length){
       const stored=s.zoneData||{};
-      const storedHasData=Object.values(stored).some(z=>z.condition||z.touchOk||z.cracks||z.soundOk||z.zoneNote);
-      if(!storedHasData)s.zoneData=sp.zoneData;
+      const hasRealData=Object.values(stored).some(z=>z.condition||z.touchOk||z.cracks||z.soundOk||z.zoneNote||z.completed);
+      if(!hasRealData)s.zoneData=sp.zoneData;
     }
+    // Photos: merge base64 into stored items so same-session admin still gets full quality
+    // But stored items with driveId take priority (they render cross-session)
+    ['photos','afterPhotos'].forEach(key=>{
+      if(!sp[key])return;
+      Object.entries(sp[key]).forEach(([zid,arr])=>{
+        if(!s[key])s[key]={};
+        if(!s[key][zid]||!s[key][zid].length){
+          // Stored has nothing — use session photos entirely
+          s[key][zid]=arr;
+        } else {
+          // Merge: copy base64 data back into stored items (stored has driveId, session has data)
+          s[key][zid]=s[key][zid].map((storedP,i)=>{
+            const sessP=arr[i];
+            if(storedP&&sessP&&typeof storedP==="object"&&typeof sessP==="object"&&!storedP.data&&sessP.data){
+              return Object.assign({},storedP,{data:sessP.data});
+            }
+            return storedP;
+          });
+        }
+      });
+    });
   }
   // Fallback: if zoneData is empty but client has zones, synthesise shells
   // so the PDF always shows zone structure (ref photos, scope, empty checks)
@@ -1232,7 +1251,20 @@ function downloadSubPDF(){
       });
       checksSection+=`</table></div>`;
 
-      // Photo grid helper
+      // Photo grid — uses base64 (same session) OR Drive direct embed URL (cross-session).
+      // Drive embed URL works publicly without login if file is shared "anyone with link".
+      function driveImgSrc(p){
+        // Drive thumbnail first — works for admin opening any time, any device
+        // Requires Apps Script to set file sharing to "anyone with link can view"
+        if(typeof p==="object"&&p.driveId&&p.driveId.length>5)
+          return `https://drive.google.com/thumbnail?id=${p.driveId}&sz=w800`;
+        // base64 second — works only in same session as submission (tech doesn't use PDF)
+        if(typeof p==="object"&&p.data)return p.data;
+        // Direct URL fallback
+        if(typeof p==="object"&&p.driveUrl&&p.driveUrl.length>5)
+          return p.driveUrl.replace("/view","").replace("open?id=","uc?export=view&id=");
+        return typeof p==="string"?p:"";
+      }
       function photoGrid(arr,label){
         if(!arr||!arr.length)return "";
         const imgs=arr.filter(p=>!(typeof p==="object"&&p.type&&p.type.startsWith("video")));
@@ -1240,12 +1272,34 @@ function downloadSubPDF(){
         let h=`<div style="margin-bottom:20px"><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#6b6f8a;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #eee">${label} (${arr.length})</div>`;
         if(imgs.length){
           h+=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:10px">`;
-          imgs.forEach(p=>{const src=typeof p==="string"?p:(p.driveId&&p.driveId.length>3?`https://drive.google.com/thumbnail?id=${p.driveId}&sz=w400`:p.data);if(src)h+=`<img src="${src}" style="width:100%;height:130px;object-fit:cover;border-radius:8px;border:1px solid #eee">`;});
+          imgs.forEach(p=>{
+            const src=driveImgSrc(p);
+            const driveUrl=typeof p==="object"?(p.driveUrl||""):"";
+            if(src){
+              // onerror: if Drive embed fails, replace with a link tile
+              const fallback=driveUrl?`this.outerHTML='<a href=\"${driveUrl}\" target=\"_blank\" style=\"display:flex;flex-direction:column;align-items:center;justify-content:center;height:130px;background:#f0f4ff;border-radius:8px;border:1px solid #c8d4ff;text-decoration:none;color:#1a1aff;font-size:11px;font-weight:600;text-align:center;padding:8px\">&#128247;<br>View Photo</a>'`:`this.style.display='none'`;
+              h+=`<img src="${src}" style="width:100%;height:130px;object-fit:cover;border-radius:8px;border:1px solid #eee" onerror="${fallback}">`;
+            } else if(driveUrl){
+              h+=`<a href="${driveUrl}" target="_blank" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:130px;background:#f0f4ff;border-radius:8px;border:1px solid #c8d4ff;text-decoration:none;color:#1a1aff;font-size:11px;font-weight:600;text-align:center;padding:8px">&#128247;<br>View Photo</a>`;
+            }
+          });
           h+=`</div>`;
         }
         if(vids.length){
           h+=`<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">`;
-          vids.forEach(p=>{const url=p.driveUrl||"";const thumb=p.thumbUrl||"";if(url){h+=`<a href="${url}" target="_blank" style="position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;width:160px;height:110px;background:#0e0e22;border-radius:8px;color:#fff;font-size:13px;font-weight:700;text-decoration:none;overflow:hidden">${thumb?`<img src="${thumb}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.45">`:""}<span style="position:relative;font-size:22px">▶</span><span style="position:relative;font-size:11px;margin-top:4px">View Video</span></a>`;}else if(p.data){h+=`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:160px;height:110px;background:#0e0e22;border-radius:8px;color:#fff;font-size:11px;text-align:center;padding:8px"><span style="font-size:22px">▶</span><span style="margin-top:4px">Video on device</span></div>`;}});
+          vids.forEach(p=>{
+            const src=typeof p==="object"?(p.data||""):"";
+            const url=typeof p==="object"?(p.driveUrl||""):"";
+            const driveId=typeof p==="object"?(p.driveId||""):"";
+            if(src){
+              h+=`<div style="position:relative;width:160px;height:110px;background:#0e0e22;border-radius:8px;overflow:hidden"><video style="width:100%;height:100%;object-fit:cover" src="${src}"></video><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none"><span style="font-size:28px;opacity:.9">▶</span></div></div>`;
+            } else if(url||driveId){
+              // Video: show thumbnail preview if available, link to Drive to play
+              const embedUrl=driveId?`https://drive.google.com/file/d/${driveId}/preview`:url;
+              const openUrl=url||`https://drive.google.com/file/d/${driveId}/view`;
+              h+=`<a href="${openUrl}" target="_blank" style="position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;width:160px;height:110px;background:#0e0e22;border-radius:8px;color:#fff;font-size:13px;font-weight:700;text-decoration:none;overflow:hidden"><span style="position:relative;font-size:22px">▶</span><span style="position:relative;font-size:11px;margin-top:4px">View Video</span></a>`;
+            }
+          });
           h+=`</div>`;
         }
         return h+"</div>";
