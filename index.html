@@ -586,18 +586,7 @@ async function submitReport(){
   const btn=document.getElementById("btn-next");btn.innerHTML='<span class="spin"></span>Submitting...';btn.disabled=true;
   const sub={id:"sub_"+Date.now(),timestamp:new Date().toISOString(),clientSlug:S.slug,clientName:S.client.name,clientAddress:S.client.address,techName:S.techName,techMobile:S.techMobile,serviceDate:S.serviceDate,serviceType:S.serviceType,serviceTypes:S.serviceTypes,calloutReason:S.calloutReason,calloutReporter:S.calloutReporter,overallNotes:document.getElementById("overall-notes").value,followup:S.followup,zoneData:JSON.parse(JSON.stringify(S.zoneData)),photos:JSON.parse(JSON.stringify(S.photos)),afterPhotos:JSON.parse(JSON.stringify(S.afterPhotos||{})),photoCount:Object.values(S.photos).flat().length,driveFolderUrl:S.driveFolderUrl||""};
   SUBMISSIONS.unshift(sub);
-  // Strip base64 .data from photos before saving to localStorage (avoids 5MB quota bust)
-  // Photos are accessible via driveUrl after upload; base64 is only needed for display before upload
-  const subsToSave=SUBMISSIONS.map(s2=>{
-    const copy={...s2};
-    if(copy.photos){copy.photos={};Object.entries(s2.photos).forEach(([zid,arr])=>{copy.photos[zid]=(Array.isArray(arr)?arr:[]).map(p=>typeof p==="object"?{...p,data:undefined}:p);});}
-    if(copy.afterPhotos){copy.afterPhotos={};Object.entries(s2.afterPhotos||{}).forEach(([zid,arr])=>{copy.afterPhotos[zid]=(Array.isArray(arr)?arr:[]).map(p=>typeof p==="object"?{...p,data:undefined}:p);});}
-    return copy;
-  });
-  try{localStorage.setItem("tkm9_submissions",JSON.stringify(subsToSave));}catch(e){
-    // If still too large, save without photos at all
-    try{localStorage.setItem("tkm9_submissions",JSON.stringify(subsToSave.map(s2=>({...s2,photos:{},afterPhotos:{}}))));}catch(e2){}
-  }
+  safeLocalSave();
   if(APPS_SCRIPT_URL){
     try{
       const payload={...sub,photos:undefined,afterPhotos:undefined,zoneData:JSON.stringify(sub.zoneData),type:"submission"};
@@ -629,6 +618,9 @@ function hardReset(){
   document.querySelectorAll(".yb[data-field]").forEach(b=>b.classList.remove("on"));
   document.getElementById("ack-error").style.display="none";
   document.getElementById("zones-container").innerHTML="";
+  // Re-enable Continue button (submitReport disables it and never re-enables)
+  const nb=document.getElementById("btn-next");
+  if(nb){nb.disabled=false;nb.innerHTML="Continue";}
   goTo(1);document.getElementById("bottom-nav").style.display="flex";updateNav();
 }
 
@@ -638,7 +630,7 @@ function showTab(tab){
     document.getElementById("tab-"+t+"-content").style.display=t===tab?"block":"none";
     document.getElementById("tab-"+t).classList.toggle("active",t===tab);
   });
-  if(tab==="submissions")renderSubmissions();
+  if(tab==="submissions"){resetSubsShowing();renderSubmissions();}
 }
 function checkPW(){
   if(document.getElementById("admin-pw").value===ADMIN_PASSWORD){
@@ -787,6 +779,54 @@ function adminSaveClient(){
 }
 
 // SUBMISSIONS
+function stripBase64ForStorage(submissionsArr){
+  // Remove base64 .data blobs before saving to localStorage (avoids 5MB quota bust).
+  // Photos are accessible via driveUrl after Drive upload completes.
+  // Only strip if the photo has a driveUrl — if no driveUrl yet, keep data so photo isn't lost.
+  return submissionsArr.map(s2=>{
+    const copy=Object.assign({},s2);
+    if(s2.photos){
+      copy.photos={};
+      Object.entries(s2.photos).forEach(([zid,arr])=>{
+        copy.photos[zid]=(Array.isArray(arr)?arr:[]).map(p=>{
+          if(typeof p!=="object")return p;
+          // Only strip base64 if we have a driveUrl (photo safely on Drive)
+          if(p.driveUrl&&p.driveUrl.length>5)return Object.assign({},p,{data:undefined});
+          // Keep data if no driveUrl (offline submission, Drive upload failed)
+          return p;
+        });
+      });
+    }
+    if(s2.afterPhotos){
+      copy.afterPhotos={};
+      Object.entries(s2.afterPhotos||{}).forEach(([zid,arr])=>{
+        copy.afterPhotos[zid]=(Array.isArray(arr)?arr:[]).map(p=>{
+          if(typeof p!=="object")return p;
+          if(p.driveUrl&&p.driveUrl.length>5)return Object.assign({},p,{data:undefined});
+          return p;
+        });
+      });
+    }
+    return copy;
+  });
+}
+function safeLocalSave(){
+  // Save SUBMISSIONS to localStorage, stripping base64 where Drive URL exists.
+  // Falls back to stripping all base64, then to dropping photos entirely.
+  try{localStorage.setItem("tkm9_submissions",JSON.stringify(stripBase64ForStorage(SUBMISSIONS)));return;}catch(e){}
+  // Second attempt: strip all base64 regardless of driveUrl
+  try{
+    const stripped=SUBMISSIONS.map(s2=>{
+      const c=Object.assign({},s2);
+      if(s2.photos){c.photos={};Object.entries(s2.photos).forEach(([zid,arr])=>{c.photos[zid]=(Array.isArray(arr)?arr:[]).map(p=>typeof p==="object"?Object.assign({},p,{data:undefined}):p);});}
+      if(s2.afterPhotos){c.afterPhotos={};Object.entries(s2.afterPhotos||{}).forEach(([zid,arr])=>{c.afterPhotos[zid]=(Array.isArray(arr)?arr:[]).map(p=>typeof p==="object"?Object.assign({},p,{data:undefined}):p);});}
+      return c;
+    });
+    localStorage.setItem("tkm9_submissions",JSON.stringify(stripped));return;
+  }catch(e){}
+  // Last resort: save without any photos
+  try{localStorage.setItem("tkm9_submissions",JSON.stringify(SUBMISSIONS.map(s2=>Object.assign({},s2,{photos:{},afterPhotos:{}}))));}catch(e){}
+}
 function renderSubmissions(){
   try{SUBMISSIONS=JSON.parse(localStorage.getItem("tkm9_submissions")||"[]");}catch(e){}
   const el=document.getElementById("submissions-list");
@@ -804,11 +844,21 @@ function renderSubmissions(){
         // Parse zoneData from string if Sheet stored it that way
         if(typeof s.zoneData==="string"){try{s.zoneData=JSON.parse(s.zoneData);}catch(e){s.zoneData={};}}
         if(localMap[s.id]){
-          // Merge: update Sheet fields but keep local zoneData (object) if sheet has none
-          if(localMap[s.id].zoneData&&Object.keys(localMap[s.id].zoneData).length===0&&s.zoneData&&Object.keys(s.zoneData).length){localMap[s.id].zoneData=s.zoneData;}
-        } else {SUBMISSIONS.unshift(s);localMap[s.id]=s;}
+          const local=localMap[s.id];
+          // Sheet submission has zoneData but local doesn't — take Sheet's zoneData
+          if((!local.zoneData||!Object.keys(local.zoneData).length)&&s.zoneData&&Object.keys(s.zoneData).length){
+            local.zoneData=s.zoneData;
+          }
+          // Always keep local photos (they have base64/driveUrl); Sheet never has photos
+          // Update basic fields from Sheet only if local is missing them
+          if(!local.techName&&s.techName)local.techName=s.techName;
+          if(!local.serviceDate&&s.serviceDate)local.serviceDate=s.serviceDate;
+        } else {
+          // New submission from Sheet not in local — add it
+          SUBMISSIONS.unshift(s);localMap[s.id]=s;
+        }
       });
-      try{localStorage.setItem("tkm9_submissions",JSON.stringify(SUBMISSIONS));}catch(e){}
+      safeLocalSave();
     }
     renderSubmissionsList();
   };
@@ -819,16 +869,22 @@ function renderSubmissions(){
   setTimeout(function(){if(window[cbName]){delete window[cbName];renderSubmissionsList();}},8000);
   document.head.appendChild(sc);
 }
+let _subsShowing=10;
 function renderSubmissionsList(){
   const el=document.getElementById("submissions-list");
   if(!SUBMISSIONS.length){el.innerHTML='<div style="color:var(--mut);font-size:14px;padding:12px 0">No submissions found.</div>';return;}
-  el.innerHTML=SUBMISSIONS.map((s,i)=>{
+  const tagMap={"Q1: JAN-MAR":"tq1","Q2: APR-JUN":"tq2","Q3: JUL-SEP":"tq3","Q4: OCT-DEC":"tq4","CALLOUT":"tco"};
+  const visible=SUBMISSIONS.slice(0,_subsShowing);
+  const rows=visible.map((s,i)=>{
     const d=new Date(s.timestamp);
-    const tagMap={"Q1: JAN-MAR":"tq1","Q2: APR-JUN":"tq2","Q3: JUL-SEP":"tq3","Q4: OCT-DEC":"tq4","CALLOUT":"tco"};
     const tags=(s.serviceTypes||[s.serviceType]).map(t=>`<span class="tag ${tagMap[t]||"tq1"}">${t}</span>`).join(" ");
     return `<div class="sub-item" onclick="viewSubmission(${i})"><strong>${s.clientName}</strong> &mdash; ${tags}<div class="sub-meta">${s.techName} &middot; ${d.toLocaleDateString("en-AU")} ${d.toLocaleTimeString("en-AU",{hour:"2-digit",minute:"2-digit"})}</div></div>`;
   }).join("");
+  const remaining=SUBMISSIONS.length-_subsShowing;
+  const moreBtn=remaining>0?`<div style="padding:10px 0;text-align:center"><button onclick="_subsShowing+=10;renderSubmissionsList()" style="background:var(--su2);border:1.5px solid var(--bor);border-radius:var(--rsm);padding:9px 20px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:var(--mut);cursor:pointer">Show ${Math.min(remaining,10)} more (${remaining} remaining)</button></div>`:"";
+  el.innerHTML=rows+moreBtn;
 }
+function resetSubsShowing(){_subsShowing=10;}
 function showSubsList(){document.getElementById("subs-list-panel").style.display="block";document.getElementById("sub-detail-panel").style.display="none";document.getElementById("sub-edit-panel").style.display="none";}
 function viewSubmission(i){
   currentSubIdx=i;const s=SUBMISSIONS[i];
@@ -913,10 +969,17 @@ function editSubmission(){
   html+=`<div class="field"><label>Callout Reason</label><input type="text" id="edit-calloutReason" value="${esc(s.calloutReason||'')}"></div>`;
   html+=`<div class="field"><label>Reported By</label><input type="text" id="edit-calloutReporter" value="${esc(s.calloutReporter||'')}"></div>`;
   html+=`<div class="field"><label>Overall Notes</label><textarea id="edit-overallNotes">${esc(s.overallNotes||'')}</textarea></div>`;
-  if(s.zoneData){
+  // Build editable zoneData: use saved data, or fall back to client zones if empty
+  const editClient=CLIENTS[s.clientSlug]||(Object.values(CLIENTS).find(c=>c.name===s.clientName))||null;
+  if(editClient&&editClient.zones){editClient.zones.forEach((z,i)=>{if(!z.id)z.id="z"+(i+1);});}
+  if(!s.zoneData||typeof s.zoneData!=="object"||Array.isArray(s.zoneData)||!Object.keys(s.zoneData).length){
+    // No saved zoneData — create shells from client zone config
+    s.zoneData={};
+    if(editClient&&editClient.zones){editClient.zones.forEach((z,i)=>{s.zoneData[z.id||"z"+(i+1)]={completed:false};});}
+  }
+  if(s.zoneData&&Object.keys(s.zoneData).length){
     html+='<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--blue);margin:14px 0 8px">Zones</div>';
-    const client=CLIENTS[s.clientSlug];
-    if(client&&client.zones){client.zones.forEach((z,i)=>{if(!z.id)z.id="z"+(i+1);});}
+    const client=editClient;
     Object.entries(s.zoneData).forEach(([zid,z])=>{
       const znum=zid.replace("z","");
       const zoneName=client?.zones?.find(z2=>z2.id===zid)?.name||client?.zones?.[parseInt(znum)-1]?.name||"Zone "+znum;
@@ -1002,7 +1065,7 @@ function saveSubEdit(){
   });}
   // Ensure all zoneData values in SUBMISSIONS are objects before saving
   SUBMISSIONS.forEach(sub=>{if(typeof sub.zoneData==="string"){try{sub.zoneData=JSON.parse(sub.zoneData);}catch(e){sub.zoneData={}; }}});
-  try{localStorage.setItem("tkm9_submissions",JSON.stringify(SUBMISSIONS));}catch(e){}
+  safeLocalSave();
   showToast("Report updated!");
   cancelSubEdit();
   viewSubmission(currentSubIdx);
@@ -1012,7 +1075,7 @@ function deletePhoto(zid,pi){
   if(currentSubIdx===null)return;
   if(!confirm("Delete this photo?"))return;
   SUBMISSIONS[currentSubIdx].photos[zid].splice(pi,1);
-  try{localStorage.setItem("tkm9_submissions",JSON.stringify(SUBMISSIONS));}catch(e){}
+  safeLocalSave();
   editSubmission();
 }
 function deleteSubmission(){
@@ -1020,7 +1083,7 @@ function deleteSubmission(){
   const s=SUBMISSIONS[currentSubIdx];
   if(!confirm("Delete report for "+s.clientName+" ("+s.techName+" - "+s.serviceDate+")? This cannot be undone."))return;
   SUBMISSIONS.splice(currentSubIdx,1);
-  try{localStorage.setItem("tkm9_submissions",JSON.stringify(SUBMISSIONS));}catch(e){}
+  safeLocalSave();
   currentSubIdx=null;
   showSubsList();
   renderSubmissions();
