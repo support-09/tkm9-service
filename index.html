@@ -367,6 +367,10 @@ let CLIENTS={"chadstone": {"name": "Chadstone Shopping Centre", "address": "1341
 let SUBMISSIONS=[];
 try{SUBMISSIONS=JSON.parse(localStorage.getItem("tkm9_submissions")||"[]");}catch(e){}
 let adminLoggedIn=sessionStorage.getItem("tkm9_admin")==="1";
+// In-memory photo store keyed by submission ID — survives the session, not localStorage
+// Allows full-res photos in PDF immediately after submit, even before Drive upload completes
+let SESSION_PHOTOS={};
+let _pendingUploads=0; // tracks how many Drive uploads are in progress
 let currentSubIdx=null;
 
 let S={};
@@ -522,6 +526,7 @@ async function handleAfterPhotos(e,zid){
 }
 async function uploadToDrive(item,zid){
   if(!APPS_SCRIPT_URL||!item.data)return;
+  _pendingUploads++;
   try{
     if(!S.driveFolderId){
       const subId="sub_"+Date.now()+"_"+S.slug;
@@ -529,12 +534,13 @@ async function uploadToDrive(item,zid){
       const data=await res.json();
       if(data.status==="success"){S.driveFolderId=data.folderId;S.driveFolderUrl=data.folderUrl;}
     }
-    if(!S.driveFolderId)return;
+    if(!S.driveFolderId){_pendingUploads--;return;}
     const b64=item.data.split(",")[1];
     const res=await fetch(APPS_SCRIPT_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"uploadPhoto",folderId:S.driveFolderId,fileData:b64,mimeType:item.type||"image/jpeg",fileName:item.name||("photo_"+Date.now())})});
     const data=await res.json();
     if(data.status==="success"){item.driveUrl=data.fileUrl;item.driveId=data.fileId;item.thumbUrl=data.thumbnailUrl;}
-  }catch(err){console.log("Drive upload:",err);}
+  }catch(err){}
+  _pendingUploads--;
 }
 
 function renderGrid(zid){
@@ -583,9 +589,24 @@ function buildReview(){
 }
 
 async function submitReport(){
-  const btn=document.getElementById("btn-next");btn.innerHTML='<span class="spin"></span>Submitting...';btn.disabled=true;
+  const btn=document.getElementById("btn-next");btn.disabled=true;
+  // Wait for any in-progress Drive uploads to finish (max 90 seconds)
+  if(_pendingUploads>0){
+    btn.innerHTML='<span class="spin"></span>Uploading photos — please wait...';
+    const start=Date.now();
+    while(_pendingUploads>0&&Date.now()-start<90000){
+      await new Promise(r=>setTimeout(r,600));
+      const total=Object.values(S.photos).flat().length+Object.values(S.afterPhotos||{}).flat().length;
+      const done=Object.values(S.photos).flat().filter(p=>p.driveUrl).length+Object.values(S.afterPhotos||{}).flat().filter(p=>p.driveUrl).length;
+      btn.innerHTML=`<span class="spin"></span>Uploading photos ${done} of ${total}...`;
+    }
+  }
+  btn.innerHTML='<span class="spin"></span>Submitting...';
+  // Build sub AFTER upload wait so driveUrls are captured
   const sub={id:"sub_"+Date.now(),timestamp:new Date().toISOString(),clientSlug:S.slug,clientName:S.client.name,clientAddress:S.client.address,techName:S.techName,techMobile:S.techMobile,serviceDate:S.serviceDate,serviceType:S.serviceType,serviceTypes:S.serviceTypes,calloutReason:S.calloutReason,calloutReporter:S.calloutReporter,overallNotes:document.getElementById("overall-notes").value,followup:S.followup,zoneData:JSON.parse(JSON.stringify(S.zoneData)),photos:JSON.parse(JSON.stringify(S.photos)),afterPhotos:JSON.parse(JSON.stringify(S.afterPhotos||{})),photoCount:Object.values(S.photos).flat().length,driveFolderUrl:S.driveFolderUrl||""};
   SUBMISSIONS.unshift(sub);
+  // Stash full-res photos AND zoneData in memory so PDF can use them this session
+  SESSION_PHOTOS[sub.id]={photos:sub.photos,afterPhotos:sub.afterPhotos,zoneData:sub.zoneData};
   safeLocalSave();
   if(APPS_SCRIPT_URL){
     try{
@@ -1124,6 +1145,18 @@ function downloadSubPDF(){
   if(!sCopy.zoneData||typeof sCopy.zoneData!=="object"||Array.isArray(sCopy.zoneData)){sCopy.zoneData={};}
   // Rebind s to the clean copy for the PDF builder below
   s=sCopy;
+  // Merge in-memory session data (full-res photos + zoneData) — always wins over localStorage
+  if(SESSION_PHOTOS[s.id]){
+    const sp=SESSION_PHOTOS[s.id];
+    if(sp.photos&&Object.keys(sp.photos).length)s.photos=sp.photos;
+    if(sp.afterPhotos&&Object.keys(sp.afterPhotos).length)s.afterPhotos=sp.afterPhotos;
+    // Also restore zoneData from session if the stored version lost data
+    if(sp.zoneData&&Object.keys(sp.zoneData).length){
+      const stored=s.zoneData||{};
+      const storedHasData=Object.values(stored).some(z=>z.condition||z.touchOk||z.cracks||z.soundOk||z.zoneNote);
+      if(!storedHasData)s.zoneData=sp.zoneData;
+    }
+  }
   // Fallback: if zoneData is empty but client has zones, synthesise shells
   // so the PDF always shows zone structure (ref photos, scope, empty checks)
   if(clientResolved&&clientResolved.zones&&(!s.zoneData||!Object.keys(s.zoneData).length)){
