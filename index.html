@@ -308,6 +308,9 @@ textarea{resize:vertical;min-height:78px}
       <div class="asec" id="subs-list-panel">
         <h3>Submitted Reports</h3>
         <div id="submissions-list"></div>
+        <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--bor)">
+          <button onclick="clearInvalidSubmissions()" style="background:none;border:none;color:var(--mut);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;text-decoration:underline">Remove invalid/test entries</button>
+        </div>
       </div>
       <div id="sub-detail-panel" style="display:none">
         <div class="asec">
@@ -906,6 +909,21 @@ function renderSubmissionsList(){
   el.innerHTML=rows+moreBtn;
 }
 function resetSubsShowing(){_subsShowing=10;}
+function clearInvalidSubmissions(){
+  const before=SUBMISSIONS.length;
+  // Keep only submissions that have the minimum required fields
+  SUBMISSIONS=SUBMISSIONS.filter(s=>{
+    const hasName=s.clientName&&s.clientName.length>2&&!s.clientName.match(/^\d{4}-\d{2}/);
+    const hasTech=s.techName&&s.techName.length>0&&!s.techName.match(/^\d{4}-\d{2}/);
+    const hasDate=s.serviceDate&&(s.serviceDate.match(/^\d{4}-\d{2}-\d{2}/)||s.serviceDate.match(/^\d{4}-\d{2}-\d{2}T/));
+    const hasId=s.id&&s.id.startsWith("sub_");
+    return hasName&&hasTech&&hasDate&&hasId;
+  });
+  const removed=before-SUBMISSIONS.length;
+  safeLocalSave();
+  renderSubmissionsList();
+  showToast("Removed "+removed+" invalid entr"+(removed===1?"y":"ies"));
+}
 function showSubsList(){document.getElementById("subs-list-panel").style.display="block";document.getElementById("sub-detail-panel").style.display="none";document.getElementById("sub-edit-panel").style.display="none";}
 function viewSubmission(i){
   currentSubIdx=i;const s=SUBMISSIONS[i];
@@ -915,7 +933,7 @@ function viewSubmission(i){
   let html=`<div class="rr"><span class="rl2">Client</span><span class="rv">${s.clientName}</span></div>`+
     `<div class="rr"><span class="rl2">Address</span><span class="rv">${s.clientAddress||""}</span></div>`+
     `<div class="rr"><span class="rl2">Technician</span><span class="rv">${s.techName}${s.techMobile?" &middot; "+s.techMobile:""}</span></div>`+
-    `<div class="rr"><span class="rl2">Date</span><span class="rv">${s.serviceDate}</span></div>`+
+    `<div class="rr"><span class="rl2">Date</span><span class="rv">${(()=>{const d=s.serviceDate||"";const p=d.length===10?new Date(d+"T12:00:00"):new Date(d);return d&&!isNaN(p)?p.toLocaleDateString("en-AU"):d||"-";})()}</span></div>`+
     `<div class="rr"><span class="rl2">Service Type</span><span class="rv">${tags}</span></div>`+
     (s.calloutReason?`<div class="rr"><span class="rl2">Callout</span><span class="rv">${s.calloutReason}</span></div>`:"")+
     `<div class="rr"><span class="rl2">Follow-up</span><span class="rv">${s.followup||"-"}</span></div>`+
@@ -1116,7 +1134,10 @@ function downloadSubPDF(){
   const client=CLIENTS[s.clientSlug];
   if(client&&client.zones){client.zones.forEach((z,i)=>{if(!z.id)z.id="z"+(i+1);});}
   const now=new Date();
-  const formattedDate=s.serviceDate?new Date(s.serviceDate).toLocaleDateString("en-AU",{day:"numeric",month:"long",year:"numeric"}):"-";
+  // Handle serviceDate in either YYYY-MM-DD or ISO timestamp format
+  const _sd=s.serviceDate||"";
+  const _sdParsed=_sd.length===10?new Date(_sd+"T12:00:00"):new Date(_sd);
+  const formattedDate=_sd&&!isNaN(_sdParsed)?_sdParsed.toLocaleDateString("en-AU",{day:"numeric",month:"long",year:"numeric"}):"-";
   const filename="TKM9_SERVICE_"+((s.clientName||"").replace(/[^a-z0-9]/gi,"_"))+"_"+(s.serviceDate||"").replace(/-/g,"")+"_"+(s.serviceType||"").replace(/[^a-z0-9]/gi,"_")+".pdf";
 
   const tagMap={"Q1: JAN-MAR":["#e8e8ff","#1a1aff"],"Q2: APR-JUN":["#e6f7ef","#00a550"],"Q3: JUL-SEP":["#fff3e0","#d97000"],"Q4: OCT-DEC":["#f3eeff","#7744cc"],"CALLOUT":["#ffebee","#cc2233"]};
