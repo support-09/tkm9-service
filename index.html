@@ -959,10 +959,10 @@ function viewSubmission(i){
       if(arr.length){
         html+=`<hr style="border-color:var(--bor);margin:10px 0"><div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--blue);margin-bottom:8px">Zone ${zid.replace("z","")} Photos</div><div style="display:flex;flex-wrap:wrap;gap:6px">`;
         arr.forEach(p=>{
-          const src=typeof p==="string"?p:p.data;
+          const src=photoSrc(p);
           const isVid=typeof p==="object"&&p.type&&p.type.startsWith("video");
           const driveUrl=typeof p==="object"&&p.driveUrl?p.driveUrl:"";
-          if(driveUrl){html+=`<a href="${driveUrl}" target="_blank"><img src="${typeof p==="object"&&p.thumbUrl?p.thumbUrl:src}" style="width:80px;height:60px;object-fit:cover;border-radius:6px;cursor:pointer"></a>`;}
+          if(driveUrl){html+=`<a href="${driveUrl}" target="_blank"><img src="${photoSrc(p)}" style="width:80px;height:60px;object-fit:cover;border-radius:6px;cursor:pointer"></a>`;}
           else if(isVid){html+=`<a href="${src}" target="_blank" style="display:flex;align-items:center;justify-content:center;width:80px;height:60px;background:var(--su2);border-radius:6px;color:var(--blue);font-size:11px;font-weight:600;text-decoration:none">&#9654; Video</a>`;}
           else{html+=`<img src="${src}" style="width:80px;height:60px;object-fit:cover;border-radius:6px">`;}
         });
@@ -977,10 +977,10 @@ function viewSubmission(i){
       if(arr.length){
         html+=`<hr style="border-color:var(--bor);margin:10px 0"><div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--grn);margin-bottom:8px">Zone ${zid.replace("z","")} — After Service Photos</div><div style="display:flex;flex-wrap:wrap;gap:6px">`;
         arr.forEach(p=>{
-          const src=typeof p==="string"?p:p.data;
+          const src=photoSrc(p);
           const driveUrl=typeof p==="object"&&p.driveUrl?p.driveUrl:"";
           const isVid=typeof p==="object"&&p.type&&p.type.startsWith("video");
-          if(driveUrl){html+=`<a href="${driveUrl}" target="_blank"><img src="${typeof p==="object"&&p.thumbUrl?p.thumbUrl:src}" style="width:80px;height:60px;object-fit:cover;border-radius:6px"></a>`;}
+          if(driveUrl){html+=`<a href="${driveUrl}" target="_blank"><img src="${photoSrc(p)}" style="width:80px;height:60px;object-fit:cover;border-radius:6px"></a>`;}
           else if(isVid){html+=`<div style="display:flex;align-items:center;justify-content:center;width:80px;height:60px;background:var(--su2);border-radius:6px;font-size:11px;color:var(--grn);font-weight:600">▶ After</div>`;}
           else if(src){html+=`<img src="${src}" style="width:80px;height:60px;object-fit:cover;border-radius:6px">`;}
         });
@@ -991,6 +991,14 @@ function viewSubmission(i){
   document.getElementById("sub-detail-content").innerHTML=html;
   document.getElementById("subs-list-panel").style.display="none";
   document.getElementById("sub-detail-panel").style.display="block";
+}
+
+function photoSrc(p){
+  if(typeof p==="string")return p;
+  if(!p||typeof p!=="object")return "";
+  if(p.data&&p.data.length>50)return p.data;
+  if(p.driveId&&p.driveId.length>5)return "https://drive.google.com/uc?export=view&id="+p.driveId;
+  return p.driveUrl||"";
 }
 function editSubmission(){
   if(currentSubIdx===null)return;
@@ -1047,7 +1055,7 @@ function editSubmission(){
       html+=`<div style="font-size:11px;font-weight:600;color:var(--mut);margin-bottom:8px;text-transform:uppercase;letter-spacing:.07em">Photos</div>`;
       html+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px" id="edit-photos-'+zid+'">';
       photoArr.forEach((p,pi)=>{
-        const src=typeof p==="string"?p:(p.driveUrl||p.data||"");
+        const src=photoSrc(p);
         const isVid=typeof p==="object"&&p.type&&p.type.startsWith("video");
         const driveUrl=typeof p==="object"&&p.driveUrl?p.driveUrl:"";
         if(isVid&&driveUrl){html+=`<div style="position:relative"><a href="${driveUrl}" target="_blank" style="display:flex;align-items:center;justify-content:center;width:80px;height:60px;background:var(--su2);border-radius:6px;color:var(--blue);font-size:11px;font-weight:600;text-decoration:none">&#9654; Video</a><button onclick="editDeletePhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center">&#215;</button></div>`;}
@@ -1063,7 +1071,7 @@ function editSubmission(){
           const src=typeof p==="string"?p:p.data;
           const isVid=typeof p==="object"&&p.type&&p.type.startsWith("video");
           const driveUrl=typeof p==="object"&&p.driveUrl?p.driveUrl:"";
-          if(driveUrl){html+=`<div style="position:relative"><a href="${driveUrl}" target="_blank"><img src="${typeof p==="object"&&p.thumbUrl?p.thumbUrl:src}" style="width:70px;height:60px;object-fit:cover;border-radius:6px"></a><button onclick="deletePhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center">&#215;</button></div>`;}
+          if(driveUrl){html+=`<div style="position:relative"><a href="${driveUrl}" target="_blank"><img src="${photoSrc(p)}" style="width:70px;height:60px;object-fit:cover;border-radius:6px"></a><button onclick="deletePhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center">&#215;</button></div>`;}
           else if(isVid){html+=`<div style="display:flex;align-items:center;justify-content:center;width:70px;height:60px;background:var(--su2);border-radius:6px;font-size:11px;color:var(--blue);position:relative">&#9654; Vid<button onclick="deletePhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer">&#215;</button></div>`;}
           else{html+=`<div style="position:relative"><img src="${src}" style="width:70px;height:60px;object-fit:cover;border-radius:6px"><button onclick="deletePhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center">&#215;</button></div>`;}
         });
@@ -1134,11 +1142,15 @@ function downloadSubPDF(){
   const client=CLIENTS[s.clientSlug];
   if(client&&client.zones){client.zones.forEach((z,i)=>{if(!z.id)z.id="z"+(i+1);});}
   const now=new Date();
-  // Handle serviceDate in either YYYY-MM-DD or ISO timestamp format
+  // Robust date parsing — handles YYYY-MM-DD, ISO timestamp, and bad values
   const _sd=s.serviceDate||"";
-  const _sdParsed=_sd.length===10?new Date(_sd+"T12:00:00"):new Date(_sd);
-  const formattedDate=_sd&&!isNaN(_sdParsed)?_sdParsed.toLocaleDateString("en-AU",{day:"numeric",month:"long",year:"numeric"}):"-";
-  const filename="TKM9_SERVICE_"+((s.clientName||"").replace(/[^a-z0-9]/gi,"_"))+"_"+(s.serviceDate||"").replace(/-/g,"")+"_"+(s.serviceType||"").replace(/[^a-z0-9]/gi,"_")+".pdf";
+  let _sdParsed=null;
+  if(_sd.match(/^\d{4}-\d{2}-\d{2}$/)){_sdParsed=new Date(_sd+"T12:00:00");}
+  else if(_sd.match(/^\d{4}-\d{2}-\d{2}T/)){_sdParsed=new Date(_sd);}
+  else if(_sd){_sdParsed=new Date(_sd);}
+  const formattedDate=(_sdParsed&&!isNaN(_sdParsed))?_sdParsed.toLocaleDateString("en-AU",{day:"numeric",month:"long",year:"numeric"}):(_sd||"-");
+  const _dateStr=(_sdParsed&&!isNaN(_sdParsed))?_sdParsed.toISOString().slice(0,10).replace(/-/g,""):"unknown";
+  const filename="TKM9_SERVICE_"+((s.clientName||"").replace(/[^a-z0-9]/gi,"_"))+"_"+_dateStr+"_"+(s.serviceType||"").replace(/[^a-z0-9]/gi,"_")+".pdf";
 
   const tagMap={"Q1: JAN-MAR":["#e8e8ff","#1a1aff"],"Q2: APR-JUN":["#e6f7ef","#00a550"],"Q3: JUL-SEP":["#fff3e0","#d97000"],"Q4: OCT-DEC":["#f3eeff","#7744cc"],"CALLOUT":["#ffebee","#cc2233"]};
   const tags=(s.serviceTypes||[s.serviceType]).filter(Boolean).map(t=>{const[bg,col]=tagMap[t]||["#eee","#333"];return`<span style="background:${bg};color:${col};padding:4px 14px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.06em;margin-left:6px">${t}</span>`;}).join("");
@@ -1165,37 +1177,16 @@ function downloadSubPDF(){
   if(!sCopy.zoneData||typeof sCopy.zoneData!=="object"||Array.isArray(sCopy.zoneData)){sCopy.zoneData={};}
   // Rebind s to the clean copy for the PDF builder below
   s=sCopy;
-  // Restore zoneData from session if stored version is empty (zoneData is small, always survives storage)
-  // Photos: use stored version (has driveId) — Drive is the cross-session source of truth
+  // SESSION_PHOTOS: if this submission was made this session, use full session data.
+  // Session has base64 photos (immediate display) + correct zoneData.
+  // Cross-session: stored data has driveId so photos load via Drive embed.
   if(SESSION_PHOTOS[s.id]){
     const sp=SESSION_PHOTOS[s.id];
-    // zoneData: session wins if stored is empty
-    if(sp.zoneData&&Object.keys(sp.zoneData).length){
-      const stored=s.zoneData||{};
-      const hasRealData=Object.values(stored).some(z=>z.condition||z.touchOk||z.cracks||z.soundOk||z.zoneNote||z.completed);
-      if(!hasRealData)s.zoneData=sp.zoneData;
-    }
-    // Photos: merge base64 into stored items so same-session admin still gets full quality
-    // But stored items with driveId take priority (they render cross-session)
-    ['photos','afterPhotos'].forEach(key=>{
-      if(!sp[key])return;
-      Object.entries(sp[key]).forEach(([zid,arr])=>{
-        if(!s[key])s[key]={};
-        if(!s[key][zid]||!s[key][zid].length){
-          // Stored has nothing — use session photos entirely
-          s[key][zid]=arr;
-        } else {
-          // Merge: copy base64 data back into stored items (stored has driveId, session has data)
-          s[key][zid]=s[key][zid].map((storedP,i)=>{
-            const sessP=arr[i];
-            if(storedP&&sessP&&typeof storedP==="object"&&typeof sessP==="object"&&!storedP.data&&sessP.data){
-              return Object.assign({},storedP,{data:sessP.data});
-            }
-            return storedP;
-          });
-        }
-      });
-    });
+    // Always use session photos (have base64 data) over stored (may have only driveId)
+    if(sp.photos&&Object.keys(sp.photos).length)s.photos=sp.photos;
+    if(sp.afterPhotos&&Object.keys(sp.afterPhotos).length)s.afterPhotos=sp.afterPhotos;
+    // Session zoneData is always authoritative — use it
+    if(sp.zoneData&&Object.keys(sp.zoneData).length)s.zoneData=sp.zoneData;
   }
   // Fallback: if zoneData is empty but client has zones, synthesise shells
   // so the PDF always shows zone structure (ref photos, scope, empty checks)
@@ -1275,16 +1266,16 @@ function downloadSubPDF(){
       // Photo grid — uses base64 (same session) OR Drive direct embed URL (cross-session).
       // Drive embed URL works publicly without login if file is shared "anyone with link".
       function driveImgSrc(p){
-        // Drive thumbnail first — works for admin opening any time, any device
-        // Requires Apps Script to set file sharing to "anyone with link can view"
-        if(typeof p==="object"&&p.driveId&&p.driveId.length>5)
-          return `https://drive.google.com/thumbnail?id=${p.driveId}&sz=w800`;
-        // base64 second — works only in same session as submission (tech doesn't use PDF)
-        if(typeof p==="object"&&p.data)return p.data;
-        // Direct URL fallback
-        if(typeof p==="object"&&p.driveUrl&&p.driveUrl.length>5)
-          return p.driveUrl.replace("/view","").replace("open?id=","uc?export=view&id=");
-        return typeof p==="string"?p:"";
+        if(typeof p==="string")return p;
+        if(typeof p!=="object"||!p)return "";
+        // 1. base64 — always works, no auth, instant (same session)
+        if(p.data&&p.data.length>50)return p.data;
+        // 2. Drive thumbnail via direct export URL — works publicly (Apps Script sets sharing)
+        if(p.driveId&&p.driveId.length>5)
+          return "https://drive.google.com/uc?export=view&id="+p.driveId;
+        // 3. driveUrl direct fallback
+        if(p.driveUrl&&p.driveUrl.length>5)return p.driveUrl;
+        return "";
       }
       function photoGrid(arr,label){
         if(!arr||!arr.length)return "";
