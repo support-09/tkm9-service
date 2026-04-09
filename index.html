@@ -385,7 +385,31 @@ document.addEventListener("DOMContentLoaded",()=>{
   if(p.has("admin")){
     ["screen-1","bottom-nav","prog-bar","step-pill"].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display="none";});
     document.getElementById("admin-wrap").style.display="block";
-    if(adminLoggedIn){document.getElementById("admin-login-view").style.display="none";document.getElementById("admin-main-view").style.display="block";renderClientList();showTab("clients");}
+    if(adminLoggedIn){
+      document.getElementById("admin-login-view").style.display="none";
+      document.getElementById("admin-main-view").style.display="block";
+      renderClientList();
+      // Check for direct submission link (?admin&sub=ID)
+      const subId=p.get("sub");
+      if(subId){
+        showTab("submissions");
+        // Wait for SUBMISSIONS to load then open the matching report
+        setTimeout(function(){
+          const idx=SUBMISSIONS.findIndex(s=>s.id===subId);
+          if(idx>=0){viewSubmission(idx);}
+          else{
+            // Not in local yet — wait for JSONP fetch to complete
+            const waitForSub=setInterval(function(){
+              const i=SUBMISSIONS.findIndex(s=>s.id===subId);
+              if(i>=0){clearInterval(waitForSub);viewSubmission(i);}
+            },500);
+            setTimeout(function(){clearInterval(waitForSub);},10000);
+          }
+        },300);
+      } else {
+        showTab("clients");
+      }
+    }
     return;
   }
   const slug=(p.get("client")||"").toLowerCase().trim();
