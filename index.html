@@ -377,7 +377,7 @@ let _pendingUploads=0; // tracks how many Drive uploads are in progress
 let currentSubIdx=null;
 
 let S={};
-function initS(){S={screen:1,slug:"",client:null,techName:"",techMobile:"",serviceDate:"",serviceType:"",serviceTypes:[],calloutReason:"",calloutReporter:"",zoneData:{},photos:{},afterPhotos:{},driveFolderId:"",driveFolderUrl:"",overallNotes:"",followup:"",ack:false};}
+function initS(){S={screen:1,slug:"",client:null,techName:"",techMobile:"",serviceDate:"",serviceType:"",serviceTypes:[],calloutReason:"",calloutReporter:"",zoneData:{},photos:{},afterPhotos:{},driveFolderId:"",driveFolderUrl:"",overallNotes:"",followup:"",ack:false,assisted:false};}
 initS();
 
 document.addEventListener("DOMContentLoaded",()=>{
@@ -418,7 +418,7 @@ document.addEventListener("DOMContentLoaded",()=>{
     document.getElementById("invalid-screen").style.display="block";
     return;
   }
-  S.slug=slug;S.client=CLIENTS[slug];
+  S.slug=slug;S.client=CLIENTS[slug];S.assisted=p.has("assisted")||adminLoggedIn;
   document.getElementById("screen-1").classList.add("active");
   document.getElementById("bottom-nav").style.display="";
   document.getElementById("prog-bar").style.display="";
@@ -478,8 +478,9 @@ function mkZBody(z){
   }
   if(z.scope&&z.scope.length){h+='<div class="sh">Scope of Work</div><ul class="scope-list">';z.scope.forEach(s=>{h+=`<li><div class="sbullet"></div><span>${s}</span></li>`;});h+="</ul>";}
   h+='<div class="coa-banner">&#9679; Condition on Arrival</div>';
+  if(S.assisted){h+=`<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button onclick="fillFromLastVisit('${z.id}')" style="background:#f0f4ff;border:1.5px solid #c8d4ff;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:700;color:#1a1aff;cursor:pointer;font-family:'DM Sans',sans-serif">&#9654; Fill from last visit</button></div>`;}
   h+=`<label>Overall Condition</label><div class="cr" id="cond-${z.id}"><button class="cb" data-val="Good" onclick="setCond('${z.id}','Good')">Good</button><button class="cb" data-val="Medium" onclick="setCond('${z.id}','Medium')">Medium</button><button class="cb" data-val="Poor" onclick="setCond('${z.id}','Poor')">Poor</button></div>`;
-  h+=`<div class="field"><label>Condition Comments (optional)</label><textarea id="cn-${z.id}" oninput="sf('${z.id}','condNote',this.value)"></textarea></div>`;
+  h+=`<div class="field"><label>Condition Comments (optional)${S.assisted?` <button id="ai-clean-btn-${z.id}-condNote" onclick="aiCleanNote('${z.id}','condNote','cn-${z.id}')" style="float:right;background:none;border:none;color:#1a1aff;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;padding:0">&#10022; Clean up</button>`:"" }</label><textarea id="cn-${z.id}" oninput="sf('${z.id}','condNote',this.value)"></textarea></div>`;
   h+='<div class="sh">Photos &amp; Video — Before Service</div>';
   h+=`<div class="pa-btns"><div class="pa-btn"><input type="file" id="pi-cam-${z.id}" accept="image/*" capture="environment">&#128247; Take Photo</div><div class="pa-btn"><input type="file" id="pi-vid-${z.id}" accept="video/*" capture="environment">&#127909; Record Video</div><div class="pa-btn"><input type="file" id="pi-lib-${z.id}" accept="image/*,video/*" multiple>&#128248; From Library</div></div>`;
   h+=`<div class="upload-prog" id="uprog-${z.id}"><div class="upload-prog-fill" id="uprog-fill-${z.id}" style="width:0%"></div></div>`;
@@ -493,7 +494,7 @@ function mkZBody(z){
   if(z.hasSound&&z.soundItems&&z.soundItems.length){h+=`<div class="sh">Sound</div><div class="sbox">Items to check: <strong>${z.soundItems.join(", ")}</strong></div>`;h+=yn(z.id,"soundOk","Sound working on ALL items?");h+=yn(z.id,"volumeOk","Volume level adequate?");}
   if(z.hasLight&&z.lightItems&&z.lightItems.length){h+=`<div class="sh">Lighting</div><div class="sbox">Items to check: <strong>${z.lightItems.join(", ")}</strong></div>`;h+=yn(z.id,"lightOk","Lighting working on ALL items?");}
   if(z.hasOther&&z.otherItems&&z.otherItems.length){h+=`<div class="sh">Other</div><div class="sbox">Items to check: <strong>${z.otherItems.join(", ")}</strong></div>`;h+=yn(z.id,"otherOk","All other items checked and OK?");}
-  h+=`<div class="sh">Zone Summary</div><div class="field"><label>Summary / Items to Flag</label><textarea id="zn-${z.id}" oninput="sf('${z.id}','zoneNote',this.value)"></textarea></div>`;h+='<div class="sh">Photos &amp; Video — After Service</div>';h+=`<div class="pa-btns"><div class="pa-btn"><input type="file" id="pia-cam-${z.id}" accept="image/*" capture="environment">&#128247; Take Photo</div><div class="pa-btn"><input type="file" id="pia-vid-${z.id}" accept="video/*" capture="environment">&#127909; Record Video</div><div class="pa-btn"><input type="file" id="pia-lib-${z.id}" accept="image/*,video/*" multiple>&#128248; From Library</div></div>`;h+=`<div class="pg" id="pga-${z.id}"></div>`;
+  h+=`<div class="sh">Zone Summary</div><div class="field"><label>Summary / Items to Flag${S.assisted?` <button id="ai-sum-btn-${z.id}" onclick="aiZoneSummary('${z.id}')" style="float:right;background:none;border:none;color:#1a1aff;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;padding:0">&#10022; Generate summary</button>`:"" }</label><textarea id="zn-${z.id}" oninput="sf('${z.id}','zoneNote',this.value)"></textarea></div>`;h+='<div class="sh">Photos &amp; Video — After Service</div>';h+=`<div class="pa-btns"><div class="pa-btn"><input type="file" id="pia-cam-${z.id}" accept="image/*" capture="environment">&#128247; Take Photo</div><div class="pa-btn"><input type="file" id="pia-vid-${z.id}" accept="video/*" capture="environment">&#127909; Record Video</div><div class="pa-btn"><input type="file" id="pia-lib-${z.id}" accept="image/*,video/*" multiple>&#128248; From Library</div></div>`;h+=`<div class="pg" id="pga-${z.id}"></div>`;
   h+=`<button class="mdb" onclick="markDone('${z.id}')">Mark Zone Complete &#10003;</button>`;
   return h;
 }
@@ -505,6 +506,134 @@ function sf(zid,key,val){S.zoneData[zid]=S.zoneData[zid]||{};S.zoneData[zid][key
 function markDone(zid){S.zoneData[zid].completed=true;const badge=document.getElementById("zbadge-"+zid),num=document.getElementById("znum-"+zid);if(badge){badge.textContent="Done";badge.className="zbadge done";}if(num)num.className="znum dn";document.getElementById("zh-"+zid).classList.remove("open");document.getElementById("zb-"+zid).classList.remove("open");}
 function toggleZ(zid){const h=document.getElementById("zh-"+zid),b=document.getElementById("zb-"+zid),was=b.classList.contains("open");document.querySelectorAll(".zb").forEach(x=>x.classList.remove("open"));document.querySelectorAll(".zh").forEach(x=>x.classList.remove("open"));if(!was){b.classList.add("open");h.classList.add("open");}}
 
+
+// ── AI ASSIST ─────────────────────────────────────────
+// Only shown when S.assisted is true (admin/Mark session)
+const CLAUDE_API="https://api.anthropic.com/v1/messages";
+
+function getLastReportForSite(slug){
+  // Find the most recent submission for this client that has zoneData
+  const prev=SUBMISSIONS.filter(s=>
+    (s.clientSlug===slug||s.clientName===CLIENTS[slug]?.name)&&
+    s.zoneData&&Object.keys(s.zoneData).length
+  );
+  return prev.length?prev[0]:null;
+}
+
+function fillFromLastVisit(zid){
+  const last=getLastReportForSite(S.slug);
+  if(!last||!last.zoneData||!last.zoneData[zid]){
+    showToast("No previous report found for this site");return;
+  }
+  const z=last.zoneData[zid];
+  // Fill condition
+  if(z.condition)setCond(zid,z.condition);
+  if(z.condNote){const el=document.getElementById("cn-"+zid);if(el){el.value=z.condNote;sf(zid,"condNote",z.condNote);}}
+  // Fill all Yes/No checks
+  const checks=["projOn","motionOk","soundCalib","equipClean","deadPixels","colourOk","soundCalib2",
+    "animalsWorking","animalsPresent","airflow","noClutter","signalOk","touchOk","cameraOk",
+    "cracks","fixings","ventBlocked","dirtyCorners","hotItems","cablesOk","dustInternal",
+    "soundOk","volumeOk","lightOk","otherOk"];
+  checks.forEach(k=>{
+    if(z[k]){
+      setYN(zid,k,z[k]);
+    }
+  });
+  // Fill zone summary
+  if(z.zoneNote){const el=document.getElementById("zn-"+zid);if(el){el.value=z.zoneNote;sf(zid,"zoneNote",z.zoneNote);}}
+  showToast("Filled from last visit — review and update what's changed");
+}
+
+async function aiZoneSummary(zid){
+  const btn=document.getElementById("ai-sum-btn-"+zid);
+  if(btn){btn.disabled=true;btn.textContent="Generating...";}
+  const z=S.zoneData[zid]||{};
+  const zoneName=S.client.zones.find((zn,i)=>(zn.id||"z"+(i+1))===zid)?.name||zid;
+  
+  // Build a plain-English summary of what was checked
+  const checkLabels={
+    touchOk:"Touch working",cameraOk:"Camera secure",cracks:"Visual cracks/damage",
+    fixings:"Fixings secure",ventBlocked:"Ventilation blocked",dirtyCorners:"Screen corners dirty",
+    hotItems:"Electrical items hot",cablesOk:"Cables secure",dustInternal:"Internal dust",
+    soundOk:"Sound working",volumeOk:"Volume adequate",lightOk:"Lighting working",
+    projOn:"Projection aligned",motionOk:"Motion sensors working",soundCalib:"Sound calibrated",
+    equipClean:"Equipment clean",deadPixels:"Dead pixels",colourOk:"Colour correct",
+    animalsWorking:"Animals working",animalsPresent:"All animals present",
+    airflow:"Airflow OK",noClutter:"Room clear",signalOk:"Signal OK"
+  };
+  const passed=[],failed=[];
+  Object.entries(checkLabels).forEach(([k,label])=>{
+    if(z[k]==="Yes")passed.push(label);
+    if(z[k]==="No")failed.push(label);
+  });
+  
+  const prompt=`You are writing a professional zone service summary for a TKM9 Play digital play equipment service report.
+
+Zone: ${zoneName}
+Site: ${S.client.name}
+Condition on arrival: ${z.condition||"not recorded"}${z.condNote?" — "+z.condNote:""}
+Checks PASSED: ${passed.length?passed.join(", "):"none recorded"}
+Checks FAILED/Issues: ${failed.length?failed.join(", "):"none"}
+Existing notes: ${z.zoneNote||"none"}
+
+Write a concise 2-3 sentence professional zone summary suitable for a client-facing service report. 
+Focus on what was found, what was done, and any items requiring follow-up.
+Be specific and professional. Do not use bullet points. Do not start with "Zone" or "The zone".`;
+
+  try{
+    const resp=await fetch(CLAUDE_API,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        model:"claude-sonnet-4-6",
+        max_tokens:200,
+        messages:[{role:"user",content:prompt}]
+      })
+    });
+    const data=await resp.json();
+    const summary=data.content&&data.content[0]&&data.content[0].text;
+    if(summary){
+      const el=document.getElementById("zn-"+zid);
+      if(el){
+        el.value=summary.trim();
+        sf(zid,"zoneNote",summary.trim());
+        showToast("Summary generated — edit as needed");
+      }
+    }else{
+      showToast("Could not generate summary — please write manually");
+    }
+  }catch(e){
+    showToast("AI unavailable — please write manually");
+  }
+  if(btn){btn.disabled=false;btn.textContent="✦ Generate summary";}
+}
+
+async function aiCleanNote(zid,field,textareaId){
+  const el=document.getElementById(textareaId);
+  if(!el||!el.value.trim()){showToast("Add some notes first");return;}
+  const btn=document.getElementById("ai-clean-btn-"+zid+"-"+field);
+  if(btn){btn.disabled=true;btn.textContent="Cleaning...";}
+  const raw=el.value.trim();
+  try{
+    const resp=await fetch(CLAUDE_API,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        model:"claude-sonnet-4-6",
+        max_tokens:150,
+        messages:[{role:"user",content:`Rewrite these rough service notes into clean, professional language for a client-facing report. Keep the same meaning. Be concise. Return only the rewritten text, nothing else.
+
+Notes: ${raw}`}]
+      })
+    });
+    const data=await resp.json();
+    const clean=data.content&&data.content[0]&&data.content[0].text;
+    if(clean){el.value=clean.trim();sf(zid,field,clean.trim());showToast("Notes cleaned up");}
+    else showToast("Could not clean notes");
+  }catch(e){showToast("AI unavailable");}
+  if(btn){btn.disabled=false;btn.textContent="✦ Clean up";}
+}
+// ── END AI ASSIST ──────────────────────────────────────
 async function handlePhotos(e,zid){
   const files=Array.from(e.target.files);
   if(!files.length)return;
@@ -685,7 +814,25 @@ function checkPW(){
     sessionStorage.setItem("tkm9_admin","1");adminLoggedIn=true;
     document.getElementById("admin-login-view").style.display="none";
     document.getElementById("admin-main-view").style.display="block";
-    renderClientList();showTab("clients");
+    renderClientList();
+    // Check if email deep-link included a specific submission ID
+    const subId=new URLSearchParams(window.location.search).get("sub");
+    if(subId){
+      showTab("submissions");
+      setTimeout(function(){
+        const idx=SUBMISSIONS.findIndex(s=>s.id===subId);
+        if(idx>=0){viewSubmission(idx);}
+        else{
+          const wait=setInterval(function(){
+            const i=SUBMISSIONS.findIndex(s=>s.id===subId);
+            if(i>=0){clearInterval(wait);viewSubmission(i);}
+          },500);
+          setTimeout(function(){clearInterval(wait);},10000);
+        }
+      },300);
+    } else {
+      showTab("clients");
+    }
   }else{document.getElementById("pw-err").style.display="block";}
 }
 function renderClientList(){
@@ -1021,7 +1168,7 @@ function photoSrc(p){
   if(typeof p==="string")return p;
   if(!p||typeof p!=="object")return "";
   if(p.data&&p.data.length>50)return p.data;
-  if(p.driveId&&p.driveId.length>5)return "https://drive.google.com/uc?export=view&id="+p.driveId;
+  if(p.driveId&&p.driveId.length>5)return "https://lh3.googleusercontent.com/d/"+p.driveId+"=w1200";
   return p.driveUrl||"";
 }
 function editSubmission(){
@@ -1092,7 +1239,7 @@ function editSubmission(){
       if(s.photos&&s.photos[zid]&&s.photos[zid].length){
         html+='<div style="font-size:11px;font-weight:600;color:var(--mut);margin-bottom:6px;text-transform:uppercase;letter-spacing:.07em">Photos</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">';
         s.photos[zid].forEach((p,pi)=>{
-          const src=typeof p==="string"?p:p.data;
+          const src=photoSrc(p);
           const isVid=typeof p==="object"&&p.type&&p.type.startsWith("video");
           const driveUrl=typeof p==="object"&&p.driveUrl?p.driveUrl:"";
           if(driveUrl){html+=`<div style="position:relative"><a href="${driveUrl}" target="_blank"><img src="${photoSrc(p)}" style="width:70px;height:60px;object-fit:cover;border-radius:6px"></a><button onclick="deletePhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center">&#215;</button></div>`;}
@@ -1287,6 +1434,21 @@ function downloadSubPDF(){
       });
       checksSection+=`</table></div>`;
 
+      // DEBUG: show photo data status in PDF (remove once photos confirmed working)
+      function photoDebug(arr, label){
+        if(!arr||!arr.length)return "";
+        let h=`<div style="background:#fff8e8;border:1px solid #f0c040;border-radius:6px;padding:10px;margin-bottom:8px;font-size:10px;font-family:monospace">`;
+        h+=`<strong>${label} — ${arr.length} photo(s):</strong><br>`;
+        arr.forEach((p,i)=>{
+          if(typeof p==="object"){
+            h+=`[${i}] data:${p.data?"YES("+Math.round(p.data.length/1000)+"kb)":"NO"} | driveId:${p.driveId||"NONE"} | driveUrl:${p.driveUrl?"YES":"NO"} | type:${p.type||"?"}<br>`;
+          } else {
+            h+=`[${i}] string src: ${String(p).slice(0,40)}<br>`;
+          }
+        });
+        return h+"</div>";
+      }
+
       // Photo grid — uses base64 (same session) OR Drive direct embed URL (cross-session).
       // Drive embed URL works publicly without login if file is shared "anyone with link".
       function driveImgSrc(p){
@@ -1296,7 +1458,7 @@ function downloadSubPDF(){
         if(p.data&&p.data.length>50)return p.data;
         // 2. Drive thumbnail via direct export URL — works publicly (Apps Script sets sharing)
         if(p.driveId&&p.driveId.length>5)
-          return "https://drive.google.com/uc?export=view&id="+p.driveId;
+          return "https://lh3.googleusercontent.com/d/"+p.driveId+"=w1200";
         // 3. driveUrl direct fallback
         if(p.driveUrl&&p.driveUrl.length>5)return p.driveUrl;
         return "";
@@ -1340,10 +1502,11 @@ function downloadSubPDF(){
         }
         return h+"</div>";
       }
+      let photoDebugSection="";
       let photoSection="";
-      if(s.photos&&s.photos[zid]){const arr=Array.isArray(s.photos[zid])?s.photos[zid]:[];if(arr.length)photoSection=photoGrid(arr,"Before Service Photos & Video");}
+      if(s.photos&&s.photos[zid]){const arr=Array.isArray(s.photos[zid])?s.photos[zid]:[];if(arr.length){photoDebugSection+=photoDebug(arr,"Before");photoSection=photoGrid(arr,"Before Service Photos & Video");}}
       let afterPhotoSection="";
-      if(s.afterPhotos&&s.afterPhotos[zid]){const arr=Array.isArray(s.afterPhotos[zid])?s.afterPhotos[zid]:[];if(arr.length)afterPhotoSection=photoGrid(arr,"After Service Photos & Video");}
+      if(s.afterPhotos&&s.afterPhotos[zid]){const arr=Array.isArray(s.afterPhotos[zid])?s.afterPhotos[zid]:[];if(arr.length){photoDebugSection+=photoDebug(arr,"After");afterPhotoSection=photoGrid(arr,"After Service Photos & Video");}}
 
       zonesHtml+=`
       <div style="margin-bottom:28px;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.07);border:1px solid #e0e0f0;page-break-inside:avoid">
@@ -1356,6 +1519,7 @@ function downloadSubPDF(){
           ${refSection}
           ${scopeSection}
           ${condSection}
+          ${photoDebugSection}
           ${photoSection}
           ${checksSection}
           ${afterPhotoSection}
