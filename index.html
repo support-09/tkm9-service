@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -179,7 +178,7 @@ textarea{resize:vertical;min-height:78px}
 <div class="toast" id="toast"></div>
 
 <div class="hdr">
-  <img class="hdr-logo" src="https://raw.githubusercontent.com/support-09/tkm9-service/main/SUPPORTHEADER_freshdesk_headphone-05-05.png" alt="TKM9 Service Desk">
+  <img class="hdr-logo" src="https://raw.githubusercontent.com/support-09/tkm9-service/main/SUPPORTHEADER_freshdesk_headphone-05-05.png" alt="TKM9 Service Desk" onclick="goHome()" style="cursor:pointer" title="Home">
   <div class="step-pill" id="step-pill">Step <b id="step-cur">1</b> of 3</div>
 </div>
 <div class="prog-bar" id="prog-bar" style="display:none"><div class="prog-fill" id="prog" style="width:33%"></div></div>
@@ -281,7 +280,6 @@ textarea{resize:vertical;min-height:78px}
 
   <div id="admin-main-view" style="display:none">
     <div class="admin-hdr">
-      <img src="https://raw.githubusercontent.com/support-09/tkm9-service/main/SUPPORTHEADER_freshdesk_headphone-05-05.png" style="height:34px;cursor:pointer" onclick="showTab('clients')" title="Back to client list">
       <h1>Service Reports</h1>
       <button class="admin-home-btn" onclick="exitAdmin()">&#127968; Home</button>
     </div>
@@ -308,6 +306,14 @@ textarea{resize:vertical;min-height:78px}
     <div id="tab-submissions-content" style="display:none">
       <div class="asec" id="subs-list-panel">
         <h3>Submitted Reports</h3>
+        <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
+          <input id="sub-search" type="text" placeholder="Search by client, technician..." oninput="filterSubmissions()" style="flex:1;padding:9px 12px;border:1.5px solid var(--bor);border-radius:var(--rsm);font-family:'DM Sans',sans-serif;font-size:13px;background:var(--su2);color:var(--txt)">
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap">
+          <label style="font-size:12px;color:var(--mut);display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="select-all-subs" onchange="toggleSelectAllSubs()"> Select all</label>
+          <button id="bulk-delete-btn" onclick="bulkDeleteSubs()" style="display:none;background:#ffebee;border:1.5px solid #cc2233;border-radius:var(--rsm);padding:6px 12px;font-size:12px;font-weight:700;color:#cc2233;cursor:pointer;font-family:'DM Sans',sans-serif">🗑 Delete selected</button>
+          <button id="bulk-download-btn" onclick="bulkDownloadSubs()" style="display:none;background:#e6f7ef;border:1.5px solid #00a550;border-radius:var(--rsm);padding:6px 12px;font-size:12px;font-weight:700;color:#00a550;cursor:pointer;font-family:'DM Sans',sans-serif">⬇ Download selected</button>
+        </div>
         <div id="submissions-list"></div>
         <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--bor)">
           <button onclick="clearInvalidSubmissions()" style="background:none;border:none;color:var(--mut);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;text-decoration:underline">Remove invalid/test entries</button>
@@ -774,7 +780,7 @@ function showTab(tab){
     document.getElementById("tab-"+t+"-content").style.display=t===tab?"block":"none";
     document.getElementById("tab-"+t).classList.toggle("active",t===tab);
   });
-  if(tab==="submissions"){resetSubsShowing();renderSubmissions();}
+  if(tab==="submissions"){resetSubsShowing();_filteredSubs=null;renderSubmissions();}
 }
 function checkPW(){
   if(document.getElementById("admin-pw").value===ADMIN_PASSWORD){
@@ -1029,24 +1035,67 @@ function renderSubmissions(){
   document.head.appendChild(sc);
 }
 let _subsShowing=10;
+let _filteredSubs=null;
 function renderSubmissionsList(){
   const el=document.getElementById("submissions-list");
   if(!SUBMISSIONS.length){el.innerHTML='<div style="color:var(--mut);font-size:14px;padding:12px 0">No submissions found.</div>';return;}
   const tagMap={"Q1: JAN-MAR":"tq1","Q2: APR-JUN":"tq2","Q3: JUL-SEP":"tq3","Q4: OCT-DEC":"tq4","CALLOUT":"tco"};
-  const visible=SUBMISSIONS.slice(0,_subsShowing);
+  const source=_filteredSubs!==null?_filteredSubs:SUBMISSIONS;
+  const visible=source.slice(0,_subsShowing);
   const rows=visible.map((s,i)=>{
     const d=new Date(s.timestamp);
     const isValidDate=!isNaN(d.getTime());
     const dateStr=isValidDate?d.toLocaleDateString("en-AU")+" "+d.toLocaleTimeString("en-AU",{hour:"2-digit",minute:"2-digit"}):s.serviceDate||"";
     const types=s.serviceTypes&&s.serviceTypes.length?s.serviceTypes:(s.serviceType?s.serviceType.split(" + "):[]);
     const tags=types.filter(Boolean).map(t=>`<span class="tag ${tagMap[t]||"tq1"}">${t}</span>`).join(" ");
-    return `<div class="sub-item" onclick="viewSubmission(${i})"><strong>${s.clientName||"Unknown client"}</strong>${tags?" &mdash; "+tags:""}<div class="sub-meta">${s.techName||"Unknown tech"} &middot; ${dateStr}</div></div>`;
+    return `<div class="sub-item" style="display:flex;align-items:center;gap:10px"><input type="checkbox" class="sub-chk" data-idx="${i}" onchange="updateBulkButtons()" onclick="event.stopPropagation()" style="width:16px;height:16px;flex-shrink:0;cursor:pointer"><div style="flex:1;cursor:pointer" onclick="viewSubmission(${i})"><strong>${s.clientName||"Unknown client"}</strong>${tags?" &mdash; "+tags:""}<div class="sub-meta">${s.techName||"Unknown tech"} &middot; ${dateStr}</div></div></div>`;
   }).join("");
-  const remaining=SUBMISSIONS.length-_subsShowing;
+  const remaining=source.length-_subsShowing;
   const moreBtn=remaining>0?`<div style="padding:10px 0;text-align:center"><button onclick="_subsShowing+=10;renderSubmissionsList()" style="background:var(--su2);border:1.5px solid var(--bor);border-radius:var(--rsm);padding:9px 20px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:var(--mut);cursor:pointer">Show ${Math.min(remaining,10)} more (${remaining} remaining)</button></div>`:"";
   el.innerHTML=rows+moreBtn;
 }
 function resetSubsShowing(){_subsShowing=10;}
+function goHome(){
+  // Go back to the main landing page
+  window.location.href=window.location.pathname;
+}
+function filterSubmissions(){
+  const q=(document.getElementById("sub-search")?.value||"").toLowerCase().trim();
+  if(!q){_filteredSubs=null;}
+  else{_filteredSubs=SUBMISSIONS.filter(s=>(s.clientName||"").toLowerCase().includes(q)||(s.techName||"").toLowerCase().includes(q)||(s.clientSlug||"").toLowerCase().includes(q)||(s.serviceType||"").toLowerCase().includes(q)||(s.calloutReason||"").toLowerCase().includes(q));}
+  _subsShowing=10;
+  renderSubmissionsList();
+}
+function updateBulkButtons(){
+  const checked=document.querySelectorAll(".sub-chk:checked").length;
+  const db=document.getElementById("bulk-delete-btn");
+  const dlb=document.getElementById("bulk-download-btn");
+  if(db)db.style.display=checked>0?"block":"none";
+  if(dlb)dlb.style.display=checked>0?"block":"none";
+}
+function toggleSelectAllSubs(){
+  const all=document.getElementById("select-all-subs");
+  document.querySelectorAll(".sub-chk").forEach(c=>c.checked=all.checked);
+  updateBulkButtons();
+}
+function bulkDeleteSubs(){
+  const checked=Array.from(document.querySelectorAll(".sub-chk:checked")).map(c=>parseInt(c.dataset.idx));
+  if(!checked.length)return;
+  if(!confirm("Delete "+checked.length+" report"+(checked.length>1?"s":"")+"? This cannot be undone."))return;
+  // Delete in reverse order to preserve indices
+  checked.sort((a,b)=>b-a).forEach(i=>SUBMISSIONS.splice(i,1));
+  safeLocalSave();
+  renderSubmissions();
+  showToast("Deleted "+checked.length+" report"+(checked.length>1?"s":""));
+}
+function bulkDownloadSubs(){
+  const checked=Array.from(document.querySelectorAll(".sub-chk:checked")).map(c=>parseInt(c.dataset.idx));
+  if(!checked.length)return;
+  showToast("Opening "+checked.length+" PDF"+(checked.length>1?"s — allow popups if blocked":""));
+  checked.forEach((i,n)=>{
+    setTimeout(()=>{currentSubIdx=i;downloadSubPDF();},n*800);
+  });
+}
 function clearInvalidSubmissions(){
   const before=SUBMISSIONS.length;
   // Keep only submissions that have the minimum required fields
