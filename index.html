@@ -654,22 +654,52 @@ async function handleAfterPhotos(e,zid){
     uploadToDrive(S.afterPhotos[zid][S.afterPhotos[zid].length-1],zid);
   }
 }
+async function compressImage(dataUrl,maxKB){
+  // Compress image to reduce upload size — videos skipped
+  if(!dataUrl||dataUrl.startsWith("data:video"))return dataUrl;
+  return new Promise(res=>{
+    const img=new Image();
+    img.onload=()=>{
+      const canvas=document.createElement("canvas");
+      let w=img.width,h=img.height;
+      // Scale down if very large
+      const maxDim=1600;
+      if(w>maxDim||h>maxDim){const s=Math.min(maxDim/w,maxDim/h);w=Math.round(w*s);h=Math.round(h*s);}
+      canvas.width=w;canvas.height=h;
+      canvas.getContext("2d").drawImage(img,0,0,w,h);
+      // Try quality 0.75 first
+      let out=canvas.toDataURL("image/jpeg",0.75);
+      // If still too big, reduce more
+      if(out.length/1024>maxKB)out=canvas.toDataURL("image/jpeg",0.5);
+      res(out);
+    };
+    img.onerror=()=>res(dataUrl);
+    img.src=dataUrl;
+  });
+}
 async function uploadToDrive(item,zid){
   if(!APPS_SCRIPT_URL||!item.data)return;
   _pendingUploads++;
   try{
     if(!S.driveFolderId){
       const subId="sub_"+Date.now()+"_"+S.slug;
-      const res=await fetch(APPS_SCRIPT_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"getUploadUrl",clientName:S.client.name,submissionId:subId})});
-      const data=await res.json();
+      const res=await fetch(APPS_SCRIPT_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"getUploadUrl",clientName:S.client?S.client.name:"Unknown",submissionId:subId})});
+      const txt=await res.text();
+      let data;try{data=JSON.parse(txt);}catch(e){console.error("getUploadUrl parse error:",txt.slice(0,200));_pendingUploads--;return;}
       if(data.status==="success"){S.driveFolderId=data.folderId;S.driveFolderUrl=data.folderUrl;}
+      else{console.error("getUploadUrl error:",data.message);_pendingUploads--;return;}
     }
     if(!S.driveFolderId){_pendingUploads--;return;}
-    const b64=item.data.split(",")[1];
-    const res=await fetch(APPS_SCRIPT_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"uploadPhoto",folderId:S.driveFolderId,fileData:b64,mimeType:item.type||"image/jpeg",fileName:item.name||("photo_"+Date.now())})});
-    const data=await res.json();
-    if(data.status==="success"){item.driveUrl=data.fileUrl;item.driveId=data.fileId;item.thumbUrl=data.thumbnailUrl;}
-  }catch(err){}
+    // Compress images before upload (not videos)
+    const uploadData=item.type&&item.type.startsWith("video")?item.data:await compressImage(item.data,800);
+    const b64=uploadData.split(",")[1];
+    const mimeType=item.type&&item.type.startsWith("video")?item.type:"image/jpeg";
+    const res=await fetch(APPS_SCRIPT_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"uploadPhoto",folderId:S.driveFolderId,fileData:b64,mimeType:mimeType,fileName:item.name||("photo_"+Date.now())})});
+    const txt2=await res.text();
+    let data2;try{data2=JSON.parse(txt2);}catch(e){console.error("uploadPhoto parse error:",txt2.slice(0,200));_pendingUploads--;return;}
+    if(data2.status==="success"){item.driveUrl=data2.fileUrl;item.driveId=data2.fileId;item.thumbUrl=data2.thumbnailUrl;}
+    else{console.error("uploadPhoto error:",data2.message);}
+  }catch(err){console.error("uploadToDrive exception:",err.message);}
   _pendingUploads--;
 }
 
@@ -1214,21 +1244,40 @@ function editDeletePhoto(zid,pi){
   safeLocalSave();
   editSubmission();
 }
-async function editAddPhotos(e,zid){
+async function editAddPhotos(e,zid,which){
   const files=Array.from(e.target.files);if(!files.length)return;
-  if(!SUBMISSIONS[currentSubIdx].photos)SUBMISSIONS[currentSubIdx].photos={};
-  if(!SUBMISSIONS[currentSubIdx].photos[zid])SUBMISSIONS[currentSubIdx].photos[zid]=[];
+  const s=SUBMISSIONS[currentSubIdx];
+  if(which==="after"){s.afterPhotos=s.afterPhotos||{};s.afterPhotos[zid]=s.afterPhotos[zid]||[];}
+  else{s.photos=s.photos||{};s.photos[zid]=s.photos[zid]||[];}
   showToast("Adding "+files.length+" photo"+(files.length>1?"s":"")+"...");
   for(const f of files){
     const r=new FileReader();
     await new Promise(res=>{r.onload=ev=>{
-      SUBMISSIONS[currentSubIdx].photos[zid].push({data:ev.target.result,type:f.type,name:f.name,driveUrl:"",driveId:""});
+      const item={data:ev.target.result,type:f.type,name:f.name,driveUrl:"",driveId:""};
+      if(which==="after")s.afterPhotos[zid].push(item);
+      else s.photos[zid].push(item);
       res();
     };r.readAsDataURL(f);});
   }
   safeLocalSave();
   editSubmission();
   showToast("Photos added");
+}
+function editDeleteAfterPhoto(zid,pi){
+  if(currentSubIdx===null)return;
+  if(!confirm("Delete this after-service photo?"))return;
+  const s=SUBMISSIONS[currentSubIdx];
+  if(!s.afterPhotos||!s.afterPhotos[zid])return;
+  s.afterPhotos[zid].splice(pi,1);
+  safeLocalSave();editSubmission();
+}
+function editViewAfterPhoto(pi,zid){
+  const s=SUBMISSIONS[currentSubIdx];
+  if(!s||!s.afterPhotos||!s.afterPhotos[zid])return;
+  const p=s.afterPhotos[zid][pi];if(!p)return;
+  const src=photoSrc(p);const driveUrl=typeof p==="object"&&p.driveUrl?p.driveUrl:"";
+  if(driveUrl)window.open(driveUrl,"_blank");
+  else if(src){const w=window.open("","_blank");w.document.write('<img src="'+src+'" style="max-width:100%;height:auto">');w.document.close();}
 }
 function photoSrc(p){
   if(typeof p==="string")return p;
@@ -1287,33 +1336,29 @@ function editSubmission(){
         html+=`<div class="field" style="margin-bottom:4px"><label style="text-transform:none;letter-spacing:0;font-size:12px">${label}</label><select id="edit-check-${zid}-${k}" style="padding:8px 10px;font-size:13px"><option value="">Not recorded</option><option value="Yes" ${z[k]==="Yes"?"selected":""}>&#10003; Yes</option><option value="No" ${z[k]==="No"?"selected":""}>&#10007; No</option></select></div>`;
       });
       html+='</div>';
+      html+=`<div class="field"><label>Zone Summary</label><textarea id="edit-zoneNote-${zid}">${esc(z.zoneNote||'')}</textarea></div>`;
+      // ── BEFORE SERVICE PHOTOS ──
       s.photos=s.photos||{};s.photos[zid]=s.photos[zid]||[];
-      const photoArr=Array.isArray(s.photos[zid])?s.photos[zid]:[];
-      html+=`<div style="font-size:11px;font-weight:600;color:var(--mut);margin-bottom:8px;text-transform:uppercase;letter-spacing:.07em">Photos</div>`;
-      html+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px" id="edit-photos-'+zid+'">';
-      photoArr.forEach((p,pi)=>{
-        const src=photoSrc(p);
-        const isVid=typeof p==="object"&&p.type&&p.type.startsWith("video");
-        const driveUrl=typeof p==="object"&&p.driveUrl?p.driveUrl:"";
-        if(isVid&&driveUrl){html+=`<div style="position:relative"><a href="${driveUrl}" target="_blank" style="display:flex;align-items:center;justify-content:center;width:80px;height:60px;background:var(--su2);border-radius:6px;color:var(--blue);font-size:11px;font-weight:600;text-decoration:none">&#9654; Video</a><button onclick="editDeletePhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center">&#215;</button></div>`;}
-        else if(src){html+=`<div style="position:relative"><img src="${src}" style="width:80px;height:60px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="editViewPhoto(${pi},'${zid}')"><button onclick="editDeletePhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center">&#215;</button></div>`;}
+      html+=`<div style="font-size:11px;font-weight:700;color:var(--mut);margin-bottom:6px;text-transform:uppercase;letter-spacing:.07em">&#128247; Before Service Photos & Video</div>`;
+      html+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">';
+      (s.photos[zid]||[]).forEach((p,pi)=>{
+        const src=photoSrc(p);const isVid=typeof p==="object"&&p.type&&p.type.startsWith("video");const driveUrl=typeof p==="object"&&p.driveUrl?p.driveUrl:"";
+        if(isVid){html+=`<div style="position:relative"><a href="${driveUrl||src||'#'}" target="_blank" style="display:flex;align-items:center;justify-content:center;width:80px;height:60px;background:#0e0e22;border-radius:6px;color:#fff;font-size:11px;font-weight:600;text-decoration:none">&#9654; Video</a><button onclick="editDeletePhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer">&#215;</button></div>`;}
+        else if(src){html+=`<div style="position:relative"><img src="${src}" style="width:80px;height:60px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="editViewPhoto(${pi},'${zid}')"><button onclick="editDeletePhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer">&#215;</button></div>`;}
       });
       html+='</div>';
-      html+=`<div class="pa-btn" style="width:fit-content;margin-bottom:12px;padding:8px 14px;font-size:12px"><input type="file" accept="image/*,video/*" multiple onchange="editAddPhotos(event,'${zid}')">&#128247; Add Photos</div>`;
-      html+=`<div class="field"><label>Zone Summary</label><textarea id="edit-zoneNote-${zid}">${esc(z.zoneNote||'')}</textarea></div>`;
-      // Show existing photos with delete option
-      if(s.photos&&s.photos[zid]&&s.photos[zid].length){
-        html+='<div style="font-size:11px;font-weight:600;color:var(--mut);margin-bottom:6px;text-transform:uppercase;letter-spacing:.07em">Photos</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">';
-        s.photos[zid].forEach((p,pi)=>{
-          const src=photoSrc(p);
-          const isVid=typeof p==="object"&&p.type&&p.type.startsWith("video");
-          const driveUrl=typeof p==="object"&&p.driveUrl?p.driveUrl:"";
-          if(driveUrl){html+=`<div style="position:relative"><a href="${driveUrl}" target="_blank"><img src="${photoSrc(p)}" style="width:70px;height:60px;object-fit:cover;border-radius:6px"></a><button onclick="deletePhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center">&#215;</button></div>`;}
-          else if(isVid){html+=`<div style="display:flex;align-items:center;justify-content:center;width:70px;height:60px;background:var(--su2);border-radius:6px;font-size:11px;color:var(--blue);position:relative">&#9654; Vid<button onclick="deletePhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer">&#215;</button></div>`;}
-          else{html+=`<div style="position:relative"><img src="${src}" style="width:70px;height:60px;object-fit:cover;border-radius:6px"><button onclick="deletePhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center">&#215;</button></div>`;}
-        });
-        html+='</div>';
-      }
+      html+=`<div class="pa-btn" style="width:fit-content;margin-bottom:16px;padding:8px 14px;font-size:12px"><input type="file" accept="image/*,video/*" multiple onchange="editAddPhotos(event,'${zid}','before')">&#128247; Add Before Photos</div>`;
+      // ── AFTER SERVICE PHOTOS ──
+      s.afterPhotos=s.afterPhotos||{};s.afterPhotos[zid]=s.afterPhotos[zid]||[];
+      html+=`<div style="font-size:11px;font-weight:700;color:var(--grn);margin-bottom:6px;text-transform:uppercase;letter-spacing:.07em">&#128247; After Service Photos & Video</div>`;
+      html+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">';
+      (s.afterPhotos[zid]||[]).forEach((p,pi)=>{
+        const src=photoSrc(p);const isVid=typeof p==="object"&&p.type&&p.type.startsWith("video");const driveUrl=typeof p==="object"&&p.driveUrl?p.driveUrl:"";
+        if(isVid){html+=`<div style="position:relative"><a href="${driveUrl||src||'#'}" target="_blank" style="display:flex;align-items:center;justify-content:center;width:80px;height:60px;background:#0e0e22;border-radius:6px;color:#fff;font-size:11px;font-weight:600;text-decoration:none">&#9654; Video</a><button onclick="editDeleteAfterPhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer">&#215;</button></div>`;}
+        else if(src){html+=`<div style="position:relative"><img src="${src}" style="width:80px;height:60px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="editViewAfterPhoto(${pi},'${zid}')"><button onclick="editDeleteAfterPhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer">&#215;</button></div>`;}
+      });
+      html+='</div>';
+      html+=`<div class="pa-btn" style="width:fit-content;margin-bottom:8px;padding:8px 14px;font-size:12px;border-color:var(--grn);color:var(--grn)"><input type="file" accept="image/*,video/*" multiple onchange="editAddPhotos(event,'${zid}','after')">&#128247; Add After Photos</div>`;
       html+='</div>';
     });
   }
