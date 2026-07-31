@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -319,6 +320,7 @@ textarea{resize:vertical;min-height:78px}
           <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
             <button class="abtn ac" style="padding:10px 16px" onclick="downloadSubPDF()">&#8595; Download PDF</button>
             <button class="abtn ae" style="padding:10px 16px" onclick="editSubmission()">&#9998; Edit Report</button>
+            <button class="abtn ad" style="padding:10px 16px" onclick="deleteSubmission()">&#128465; Delete</button>
             <button class="abtn" style="padding:10px 16px;background:var(--su2);color:var(--txt)" onclick="showSubsList()">&#8592; Back</button>
           </div>
         </div>
@@ -544,67 +546,42 @@ function fillFromLastVisit(zid){
   showToast("Filled from last visit — review and update what's changed");
 }
 
+async function callAI(prompt,maxTokens){
+  // Routes through Apps Script proxy to avoid CORS block on direct API calls
+  const resp=await fetch(APPS_SCRIPT_URL,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({type:"aiAssist",prompt:prompt,maxTokens:maxTokens||200})
+  });
+  const data=await resp.json();
+  if(data.status==="success"&&data.text)return data.text;
+  throw new Error(data.message||"AI unavailable");
+}
+
 async function aiZoneSummary(zid){
   const btn=document.getElementById("ai-sum-btn-"+zid);
   if(btn){btn.disabled=true;btn.textContent="Generating...";}
   const z=S.zoneData[zid]||{};
   const zoneName=S.client.zones.find((zn,i)=>(zn.id||"z"+(i+1))===zid)?.name||zid;
-  
-  // Build a plain-English summary of what was checked
-  const checkLabels={
-    touchOk:"Touch working",cameraOk:"Camera secure",cracks:"Visual cracks/damage",
-    fixings:"Fixings secure",ventBlocked:"Ventilation blocked",dirtyCorners:"Screen corners dirty",
-    hotItems:"Electrical items hot",cablesOk:"Cables secure",dustInternal:"Internal dust",
-    soundOk:"Sound working",volumeOk:"Volume adequate",lightOk:"Lighting working",
-    projOn:"Projection aligned",motionOk:"Motion sensors working",soundCalib:"Sound calibrated",
-    equipClean:"Equipment clean",deadPixels:"Dead pixels",colourOk:"Colour correct",
-    animalsWorking:"Animals working",animalsPresent:"All animals present",
-    airflow:"Airflow OK",noClutter:"Room clear",signalOk:"Signal OK"
-  };
+  const checkLabels={touchOk:"Touch working",cameraOk:"Camera secure",cracks:"Visual cracks/damage",fixings:"Fixings secure",ventBlocked:"Ventilation blocked",dirtyCorners:"Screen corners dirty",hotItems:"Electrical items hot",cablesOk:"Cables secure",dustInternal:"Internal dust",soundOk:"Sound working",volumeOk:"Volume adequate",lightOk:"Lighting working"};
   const passed=[],failed=[];
-  Object.entries(checkLabels).forEach(([k,label])=>{
-    if(z[k]==="Yes")passed.push(label);
-    if(z[k]==="No")failed.push(label);
-  });
-  
-  const prompt=`You are writing a professional zone service summary for a TKM9 Play digital play equipment service report.
+  Object.entries(checkLabels).forEach(([k,label])=>{if(z[k]==="Yes")passed.push(label);if(z[k]==="No")failed.push(label);});
+  const prompt=`Write a concise 2-3 sentence professional zone service summary for a client-facing report.
 
 Zone: ${zoneName}
 Site: ${S.client.name}
 Condition on arrival: ${z.condition||"not recorded"}${z.condNote?" — "+z.condNote:""}
 Checks PASSED: ${passed.length?passed.join(", "):"none recorded"}
-Checks FAILED/Issues: ${failed.length?failed.join(", "):"none"}
+Checks FAILED: ${failed.length?failed.join(", "):"none"}
 Existing notes: ${z.zoneNote||"none"}
 
-Write a concise 2-3 sentence professional zone summary suitable for a client-facing service report. 
-Focus on what was found, what was done, and any items requiring follow-up.
-Be specific and professional. Do not use bullet points. Do not start with "Zone" or "The zone".`;
-
+Focus on what was found and any items requiring follow-up. Be specific and professional. Do not use bullet points.`;
   try{
-    const resp=await fetch(CLAUDE_API,{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({
-        model:"claude-sonnet-4-6",
-        max_tokens:200,
-        messages:[{role:"user",content:prompt}]
-      })
-    });
-    const data=await resp.json();
-    const summary=data.content&&data.content[0]&&data.content[0].text;
-    if(summary){
-      const el=document.getElementById("zn-"+zid);
-      if(el){
-        el.value=summary.trim();
-        sf(zid,"zoneNote",summary.trim());
-        showToast("Summary generated — edit as needed");
-      }
-    }else{
-      showToast("Could not generate summary — please write manually");
-    }
-  }catch(e){
-    showToast("AI unavailable — please write manually");
-  }
+    const text=await callAI(prompt,200);
+    const el=document.getElementById("zn-"+zid);
+    if(el){el.value=text.trim();sf(zid,"zoneNote",text.trim());}
+    showToast("Summary generated — edit as needed");
+  }catch(e){showToast("AI unavailable — please write manually");}
   if(btn){btn.disabled=false;btn.textContent="✦ Generate summary";}
 }
 
@@ -613,24 +590,14 @@ async function aiCleanNote(zid,field,textareaId){
   if(!el||!el.value.trim()){showToast("Add some notes first");return;}
   const btn=document.getElementById("ai-clean-btn-"+zid+"-"+field);
   if(btn){btn.disabled=true;btn.textContent="Cleaning...";}
-  const raw=el.value.trim();
-  try{
-    const resp=await fetch(CLAUDE_API,{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({
-        model:"claude-sonnet-4-6",
-        max_tokens:150,
-        messages:[{role:"user",content:`Rewrite these rough service notes into clean, professional language for a client-facing report. Keep the same meaning. Be concise. Return only the rewritten text, nothing else.
+  const prompt=`Rewrite these rough service notes into clean, professional language for a client-facing report. Keep the same meaning. Be concise. Return only the rewritten text, nothing else.
 
-Notes: ${raw}`}]
-      })
-    });
-    const data=await resp.json();
-    const clean=data.content&&data.content[0]&&data.content[0].text;
-    if(clean){el.value=clean.trim();sf(zid,field,clean.trim());showToast("Notes cleaned up");}
-    else showToast("Could not clean notes");
-  }catch(e){showToast("AI unavailable");}
+Notes: ${el.value.trim()}`;
+  try{
+    const text=await callAI(prompt,150);
+    el.value=text.trim();sf(zid,field,text.trim());
+    showToast("Notes cleaned up");
+  }catch(e){showToast("AI unavailable — please write manually");}
   if(btn){btn.disabled=false;btn.textContent="✦ Clean up";}
 }
 // ── END AI ASSIST ──────────────────────────────────────
@@ -1164,6 +1131,41 @@ function viewSubmission(i){
   document.getElementById("sub-detail-panel").style.display="block";
 }
 
+function editViewPhoto(pi,zid){
+  const s=SUBMISSIONS[currentSubIdx];
+  if(!s||!s.photos||!s.photos[zid])return;
+  const p=s.photos[zid][pi];
+  if(!p)return;
+  const src=photoSrc(p);
+  const driveUrl=typeof p==="object"&&p.driveUrl?p.driveUrl:"";
+  if(driveUrl)window.open(driveUrl,"_blank");
+  else if(src){const w=window.open("","_blank");w.document.write('<img src="'+src+'" style="max-width:100%;height:auto">');w.document.close();}
+}
+function editDeletePhoto(zid,pi){
+  if(currentSubIdx===null)return;
+  if(!confirm("Delete this photo?"))return;
+  if(!SUBMISSIONS[currentSubIdx].photos)return;
+  if(!SUBMISSIONS[currentSubIdx].photos[zid])return;
+  SUBMISSIONS[currentSubIdx].photos[zid].splice(pi,1);
+  safeLocalSave();
+  editSubmission();
+}
+async function editAddPhotos(e,zid){
+  const files=Array.from(e.target.files);if(!files.length)return;
+  if(!SUBMISSIONS[currentSubIdx].photos)SUBMISSIONS[currentSubIdx].photos={};
+  if(!SUBMISSIONS[currentSubIdx].photos[zid])SUBMISSIONS[currentSubIdx].photos[zid]=[];
+  showToast("Adding "+files.length+" photo"+(files.length>1?"s":"")+"...");
+  for(const f of files){
+    const r=new FileReader();
+    await new Promise(res=>{r.onload=ev=>{
+      SUBMISSIONS[currentSubIdx].photos[zid].push({data:ev.target.result,type:f.type,name:f.name,driveUrl:"",driveId:""});
+      res();
+    };r.readAsDataURL(f);});
+  }
+  safeLocalSave();
+  editSubmission();
+  showToast("Photos added");
+}
 function photoSrc(p){
   if(typeof p==="string")return p;
   if(!p||typeof p!=="object")return "";
