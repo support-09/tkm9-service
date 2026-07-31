@@ -315,8 +315,7 @@ textarea{resize:vertical;min-height:78px}
           <button id="bulk-download-btn" onclick="bulkDownloadSubs()" style="display:none;background:#e6f7ef;border:1.5px solid #00a550;border-radius:var(--rsm);padding:6px 12px;font-size:12px;font-weight:700;color:#00a550;cursor:pointer;font-family:'DM Sans',sans-serif">⬇ Download selected</button>
         </div>
         <div id="submissions-list"></div>
-        <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--bor);display:flex;gap:16px">
-          <button onclick="clearInvalidSubmissions()" style="background:none;border:none;color:var(--mut);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;text-decoration:underline">Remove invalid/test entries</button>
+        <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--bor)">
           <button onclick="deleteAllSubmissions()" style="background:none;border:none;color:var(--red);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;text-decoration:underline">Delete ALL submissions</button>
         </div>
       </div>
@@ -554,12 +553,9 @@ function fillFromLastVisit(zid){
 }
 
 async function callAI(prompt,maxTokens){
-  // Routes through Apps Script proxy to avoid CORS block on direct API calls
-  const resp=await fetch(APPS_SCRIPT_URL,{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({type:"aiAssist",prompt:prompt,maxTokens:maxTokens||200})
-  });
+  // Use GET to avoid CORS preflight — Apps Script handles via doGet
+  const params=new URLSearchParams({type:"aiAssist",prompt:prompt,maxTokens:maxTokens||200});
+  const resp=await fetch(APPS_SCRIPT_URL+"?"+params.toString());
   const data=await resp.json();
   if(data.status==="success"&&data.text)return data.text;
   throw new Error(data.message||"AI unavailable");
@@ -683,7 +679,8 @@ async function uploadToDrive(item,zid){
   try{
     if(!S.driveFolderId){
       const subId="sub_"+Date.now()+"_"+S.slug;
-      const res=await fetch(APPS_SCRIPT_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"getUploadUrl",clientName:S.client?S.client.name:"Unknown",submissionId:subId})});
+      const uploadParams=new URLSearchParams({type:"getUploadUrl",clientName:S.client?S.client.name:"Unknown",submissionId:subId});
+      const res=await fetch(APPS_SCRIPT_URL+"?"+uploadParams.toString(),{method:"GET"});
       const txt=await res.text();
       let data;try{data=JSON.parse(txt);}catch(e){console.error("getUploadUrl parse error:",txt.slice(0,200));_pendingUploads--;return;}
       if(data.status==="success"){S.driveFolderId=data.folderId;S.driveFolderUrl=data.folderUrl;}
@@ -694,11 +691,19 @@ async function uploadToDrive(item,zid){
     const uploadData=item.type&&item.type.startsWith("video")?item.data:await compressImage(item.data,800);
     const b64=uploadData.split(",")[1];
     const mimeType=item.type&&item.type.startsWith("video")?item.type:"image/jpeg";
-    const res=await fetch(APPS_SCRIPT_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"uploadPhoto",folderId:S.driveFolderId,fileData:b64,mimeType:mimeType,fileName:item.name||("photo_"+Date.now())})});
-    const txt2=await res.text();
-    let data2;try{data2=JSON.parse(txt2);}catch(e){console.error("uploadPhoto parse error:",txt2.slice(0,200));_pendingUploads--;return;}
-    if(data2.status==="success"){item.driveUrl=data2.fileUrl;item.driveId=data2.fileId;item.thumbUrl=data2.thumbnailUrl;}
-    else{console.error("uploadPhoto error:",data2.message);}
+    // Photo upload uses no-cors to avoid preflight (large base64 payload)
+    // Apps Script processes it and we confirm via a followup GET
+    const photoPayload={type:"uploadPhoto",folderId:S.driveFolderId,fileData:b64,mimeType:mimeType,fileName:item.name||("photo_"+Date.now())};
+    await fetch(APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:JSON.stringify(photoPayload)});
+    // Small delay then check if file appeared in folder
+    await new Promise(r=>setTimeout(r,2000));
+    // Confirm via GET
+    const checkParams=new URLSearchParams({type:"getLastUpload",folderId:S.driveFolderId,fileName:item.name||""});
+    try{
+      const chk=await fetch(APPS_SCRIPT_URL+"?"+checkParams.toString());
+      const chkData=await chk.json();
+      if(chkData.status==="success"){item.driveUrl=chkData.fileUrl;item.driveId=chkData.fileId;item.thumbUrl=chkData.thumbnailUrl;}
+    }catch(e){}
   }catch(err){console.error("uploadToDrive exception:",err.message);}
   _pendingUploads--;
 }
@@ -791,7 +796,9 @@ function showSuccess(sub){
 }
 
 function hardReset(){
+  const wasAssisted=S.assisted;
   initS();S.slug=(new URLSearchParams(window.location.search).get("client")||"").toLowerCase().trim();S.client=CLIENTS[S.slug];
+  S.assisted=wasAssisted||new URLSearchParams(window.location.search).has("assisted")||adminLoggedIn;
   ["tech-name","tech-mobile","callout-reason","callout-reporter","overall-notes"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
   document.getElementById("service-date").value=new Date().toISOString().split("T")[0];
   document.getElementById("callout-extra").classList.remove("show");
@@ -1087,8 +1094,16 @@ function renderSubmissionsList(){
 }
 function resetSubsShowing(){_subsShowing=10;}
 function goHome(){
-  // Go back to the main landing page
-  window.location.href=window.location.pathname;
+  // If in admin, go to admin home; otherwise go to site root
+  if(adminLoggedIn){
+    // Hide detail/edit panels, go back to clients tab
+    document.getElementById("sub-detail-panel").style.display="none";
+    document.getElementById("sub-edit-panel").style.display="none";
+    document.getElementById("subs-list-panel").style.display="none";
+    showTab("clients");
+  } else {
+    window.location.href=window.location.pathname;
+  }
 }
 function filterSubmissions(){
   const q=(document.getElementById("sub-search")?.value||"").toLowerCase().trim();
@@ -1545,21 +1560,8 @@ function downloadSubPDF(){
       });
       checksSection+=`</table></div>`;
 
-      // DEBUG: show photo data status in PDF (remove once photos confirmed working)
-      function photoDebug(arr, label){
-        if(!arr||!arr.length)return "";
-        let h=`<div style="background:#fff8e8;border:1px solid #f0c040;border-radius:6px;padding:10px;margin-bottom:8px;font-size:10px;font-family:monospace">`;
-        h+=`<strong>${label} — ${arr.length} photo(s):</strong><br>`;
-        arr.forEach((p,i)=>{
-          if(typeof p==="object"){
-            h+=`[${i}] data:${p.data?"YES("+Math.round(p.data.length/1000)+"kb)":"NO"} | driveId:${p.driveId||"NONE"} | driveUrl:${p.driveUrl?"YES":"NO"} | type:${p.type||"?"}<br>`;
-          } else {
-            h+=`[${i}] string src: ${String(p).slice(0,40)}<br>`;
-          }
-        });
-        return h+"</div>";
-      }
 
+      
       // Photo grid — uses base64 (same session) OR Drive direct embed URL (cross-session).
       // Drive embed URL works publicly without login if file is shared "anyone with link".
       function driveImgSrc(p){
@@ -1613,11 +1615,10 @@ function downloadSubPDF(){
         }
         return h+"</div>";
       }
-      let photoDebugSection="";
       let photoSection="";
-      if(s.photos&&s.photos[zid]){const arr=Array.isArray(s.photos[zid])?s.photos[zid]:[];if(arr.length){photoDebugSection+=photoDebug(arr,"Before");photoSection=photoGrid(arr,"Before Service Photos & Video");}}
+      if(s.photos&&s.photos[zid]){const arr=Array.isArray(s.photos[zid])?s.photos[zid]:[];if(arr.length)photoSection=photoGrid(arr,"Before Service Photos & Video");}
       let afterPhotoSection="";
-      if(s.afterPhotos&&s.afterPhotos[zid]){const arr=Array.isArray(s.afterPhotos[zid])?s.afterPhotos[zid]:[];if(arr.length){photoDebugSection+=photoDebug(arr,"After");afterPhotoSection=photoGrid(arr,"After Service Photos & Video");}}
+      if(s.afterPhotos&&s.afterPhotos[zid]){const arr=Array.isArray(s.afterPhotos[zid])?s.afterPhotos[zid]:[];if(arr.length)afterPhotoSection=photoGrid(arr,"After Service Photos & Video");}
 
       zonesHtml+=`
       <div style="margin-bottom:28px;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.07);border:1px solid #e0e0f0;page-break-inside:avoid">
@@ -1630,7 +1631,6 @@ function downloadSubPDF(){
           ${refSection}
           ${scopeSection}
           ${condSection}
-          ${photoDebugSection}
           ${photoSection}
           ${checksSection}
           ${afterPhotoSection}
