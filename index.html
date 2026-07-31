@@ -315,8 +315,9 @@ textarea{resize:vertical;min-height:78px}
           <button id="bulk-download-btn" onclick="bulkDownloadSubs()" style="display:none;background:#e6f7ef;border:1.5px solid #00a550;border-radius:var(--rsm);padding:6px 12px;font-size:12px;font-weight:700;color:#00a550;cursor:pointer;font-family:'DM Sans',sans-serif">⬇ Download selected</button>
         </div>
         <div id="submissions-list"></div>
-        <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--bor)">
+        <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--bor);display:flex;gap:16px">
           <button onclick="clearInvalidSubmissions()" style="background:none;border:none;color:var(--mut);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;text-decoration:underline">Remove invalid/test entries</button>
+          <button onclick="deleteAllSubmissions()" style="background:none;border:none;color:var(--red);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;text-decoration:underline">Delete ALL submissions</button>
         </div>
       </div>
       <div id="sub-detail-panel" style="display:none">
@@ -1048,7 +1049,7 @@ function renderSubmissionsList(){
     const dateStr=isValidDate?d.toLocaleDateString("en-AU")+" "+d.toLocaleTimeString("en-AU",{hour:"2-digit",minute:"2-digit"}):s.serviceDate||"";
     const types=s.serviceTypes&&s.serviceTypes.length?s.serviceTypes:(s.serviceType?s.serviceType.split(" + "):[]);
     const tags=types.filter(Boolean).map(t=>`<span class="tag ${tagMap[t]||"tq1"}">${t}</span>`).join(" ");
-    return `<div class="sub-item" style="display:flex;align-items:center;gap:10px"><input type="checkbox" class="sub-chk" data-idx="${i}" onchange="updateBulkButtons()" onclick="event.stopPropagation()" style="width:16px;height:16px;flex-shrink:0;cursor:pointer"><div style="flex:1;cursor:pointer" onclick="viewSubmission(${i})"><strong>${s.clientName||"Unknown client"}</strong>${tags?" &mdash; "+tags:""}<div class="sub-meta">${s.techName||"Unknown tech"} &middot; ${dateStr}</div></div></div>`;
+    const realIdx=SUBMISSIONS.indexOf(s);return `<div class="sub-item" style="display:flex;align-items:center;gap:10px"><input type="checkbox" class="sub-chk" data-idx="${realIdx}" data-id="${s.id||""}" onchange="updateBulkButtons()" onclick="event.stopPropagation()" style="width:16px;height:16px;flex-shrink:0;cursor:pointer"><div style="flex:1;cursor:pointer" onclick="viewSubmission(${realIdx})"><strong>${s.clientName||"Unknown client"}</strong>${tags?" &mdash; "+tags:""}<div class="sub-meta">${s.techName||"Unknown tech"} &middot; ${dateStr}</div></div></div>`;
   }).join("");
   const remaining=source.length-_subsShowing;
   const moreBtn=remaining>0?`<div style="padding:10px 0;text-align:center"><button onclick="_subsShowing+=10;renderSubmissionsList()" style="background:var(--su2);border:1.5px solid var(--bor);border-radius:var(--rsm);padding:9px 20px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:var(--mut);cursor:pointer">Show ${Math.min(remaining,10)} more (${remaining} remaining)</button></div>`:"";
@@ -1079,12 +1080,17 @@ function toggleSelectAllSubs(){
   updateBulkButtons();
 }
 function bulkDeleteSubs(){
-  const checked=Array.from(document.querySelectorAll(".sub-chk:checked")).map(c=>parseInt(c.dataset.idx));
+  const checked=Array.from(document.querySelectorAll(".sub-chk:checked"));
   if(!checked.length)return;
   if(!confirm("Delete "+checked.length+" report"+(checked.length>1?"s":"")+"? This cannot be undone."))return;
-  // Delete in reverse order to preserve indices
-  checked.sort((a,b)=>b-a).forEach(i=>SUBMISSIONS.splice(i,1));
+  // Delete by ID (most reliable — works even with filtered/paginated lists)
+  const idsToDelete=new Set(checked.map(c=>c.dataset.id).filter(Boolean));
+  const idxToDelete=new Set(checked.map(c=>parseInt(c.dataset.idx)).filter(n=>!isNaN(n)));
+  SUBMISSIONS=SUBMISSIONS.filter((s,i)=>!idsToDelete.has(s.id)&&!idxToDelete.has(i));
   safeLocalSave();
+  _filteredSubs=null;
+  document.getElementById("select-all-subs").checked=false;
+  updateBulkButtons();
   renderSubmissions();
   showToast("Deleted "+checked.length+" report"+(checked.length>1?"s":""));
 }
@@ -1095,6 +1101,15 @@ function bulkDownloadSubs(){
   checked.forEach((i,n)=>{
     setTimeout(()=>{currentSubIdx=i;downloadSubPDF();},n*800);
   });
+}
+function deleteAllSubmissions(){
+  if(!confirm("Delete ALL "+SUBMISSIONS.length+" submissions? This cannot be undone."))return;
+  if(!confirm("Are you sure? This will permanently delete everything in your local storage."))return;
+  SUBMISSIONS=[];
+  safeLocalSave();
+  _filteredSubs=null;
+  renderSubmissions();
+  showToast("All submissions deleted");
 }
 function clearInvalidSubmissions(){
   const before=SUBMISSIONS.length;
