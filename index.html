@@ -116,6 +116,7 @@ textarea{resize:vertical;min-height:78px}
 .spin{display:inline-block;width:17px;height:17px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:7px}
 @keyframes spin{to{transform:rotate(360deg)}}
 .toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:#0e0e22;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
+.toast.ai{background:#e6197a}
 .toast.show{opacity:1}
 /* ADMIN */
 #admin-wrap{display:none;max-width:720px;margin:0 auto;padding:20px 16px 80px}
@@ -575,7 +576,7 @@ function fillFromLastVisit(zid){
   });
   // Fill zone summary
   if(z.zoneNote){const el=document.getElementById("zn-"+zid);if(el){el.value=z.zoneNote;sf(zid,"zoneNote",z.zoneNote);}}
-  showToast("Filled from last visit — review and update what's changed");
+  showToast("Filled from last visit — review and update what's changed","ai");
 }
 
 async function callAI(prompt,maxTokens){
@@ -588,6 +589,9 @@ async function callAI(prompt,maxTokens){
 
 async function aiZoneSummary(zid){
   const btn=document.getElementById("ai-sum-btn-"+zid);
+  const el=document.getElementById("zn-"+zid);
+  const originalOnclick=btn?btn.onclick:null;
+  const previousValue=el?el.value:"";
   if(btn){btn.disabled=true;btn.textContent="Generating...";}
   const z=S.zoneData[zid]||{};
   const zoneName=S.client.zones.find((zn,i)=>(zn.id||"z"+(i+1))===zid)?.name||zid;
@@ -606,17 +610,32 @@ Existing notes: ${z.zoneNote||"none"}
 Focus on what was found and any items requiring follow-up. Be specific and professional. Do not use bullet points.`;
   try{
     const text=await callAI(prompt,200);
-    const el=document.getElementById("zn-"+zid);
     if(el){el.value=text.trim();sf(zid,"zoneNote",text.trim());}
-    showToast("Summary generated — edit as needed");
-  }catch(e){console.error("AI summary error:",e.message);showToast("AI unavailable — please write manually");}
+    showToast("Summary generated — edit as needed","ai");
+    if(btn&&el){
+      btn.disabled=false;
+      btn.innerHTML="&#8617; Undo";
+      btn.onclick=()=>{
+        el.value=previousValue;sf(zid,"zoneNote",previousValue);
+        showToast("Reverted to your original text","ai");
+        btn.innerHTML="&#129668; Generate summary";
+        btn.onclick=originalOnclick;
+      };
+      setTimeout(()=>{if(btn.innerHTML.indexOf("Undo")!==-1){btn.innerHTML="&#129668; Generate summary";btn.onclick=originalOnclick;}},8000);
+      return;
+    }
+  }catch(e){console.error("AI summary error:",e.message);showToast("AI unavailable — please write manually","ai");}
   if(btn){btn.disabled=false;btn.innerHTML="&#129668; Generate summary";}
 }
 
 async function aiCleanNote(zid,field,textareaId){
   const el=document.getElementById(textareaId);
   if(!el||!el.value.trim()){showToast("Add some notes first");return;}
+  const words=el.value.trim().split(/\s+/).filter(Boolean);
+  if(words.length<2){showToast("Add a bit more detail — needs more than a single word","ai");return;}
   const btn=document.getElementById("ai-clean-btn-"+zid+"-"+field);
+  const originalOnclick=btn?btn.onclick:null;
+  const previousValue=el.value;
   if(btn){btn.disabled=true;btn.textContent="Cleaning...";}
   const prompt=`Rewrite these rough service notes into clean, professional language for a client-facing report. Keep the same meaning. Be concise. Return only the rewritten text, nothing else.
 
@@ -624,8 +643,20 @@ Notes: ${el.value.trim()}`;
   try{
     const text=await callAI(prompt,150);
     el.value=text.trim();sf(zid,field,text.trim());
-    showToast("Notes cleaned up");
-  }catch(e){console.error("AI clean up error:",e.message);showToast("AI unavailable — please write manually");}
+    showToast("Notes cleaned up","ai");
+    if(btn){
+      btn.disabled=false;
+      btn.innerHTML="&#8617; Undo";
+      btn.onclick=()=>{
+        el.value=previousValue;sf(zid,field,previousValue);
+        showToast("Reverted to your original text","ai");
+        btn.innerHTML="&#129668; Clean up";
+        btn.onclick=originalOnclick;
+      };
+      setTimeout(()=>{if(btn.innerHTML.indexOf("Undo")!==-1){btn.innerHTML="&#129668; Clean up";btn.onclick=originalOnclick;}},8000);
+      return;
+    }
+  }catch(e){console.error("AI clean up error:",e.message);showToast("AI unavailable — please write manually","ai");}
   if(btn){btn.disabled=false;btn.innerHTML="&#129668; Clean up";}
 }
 // Shows/hides the AI buttons on fields that live in static HTML (Callout
@@ -643,7 +674,11 @@ function syncAssistedButtons(){
 async function aiCleanField(inputId,btnId){
   const el=document.getElementById(inputId);
   if(!el||!el.value.trim()){showToast("Add some text first");return;}
+  const words=el.value.trim().split(/\s+/).filter(Boolean);
+  if(words.length<2){showToast("Add a bit more detail — needs more than a single word","ai");return;}
   const btn=document.getElementById(btnId);
+  const originalOnclick=btn?btn.onclick:null;
+  const previousValue=el.value;
   if(btn){btn.disabled=true;btn.textContent="Cleaning...";}
   const prompt=`Rewrite this into clean, professional language for a client-facing service report. Keep the same meaning. Be concise. Return only the rewritten text, nothing else.
 
@@ -651,8 +686,20 @@ Text: ${el.value.trim()}`;
   try{
     const text=await callAI(prompt,150);
     el.value=text.trim();
-    showToast("Cleaned up");
-  }catch(e){console.error("AI clean up error:",e.message);showToast("AI unavailable — please write manually");}
+    showToast("Cleaned up","ai");
+    if(btn){
+      btn.disabled=false;
+      btn.innerHTML="&#8617; Undo";
+      btn.onclick=()=>{
+        el.value=previousValue;
+        showToast("Reverted to your original text","ai");
+        btn.innerHTML="&#129668; Clean up";
+        btn.onclick=originalOnclick;
+      };
+      setTimeout(()=>{if(btn.innerHTML.indexOf("Undo")!==-1){btn.innerHTML="&#129668; Clean up";btn.onclick=originalOnclick;}},8000);
+      return;
+    }
+  }catch(e){console.error("AI clean up error:",e.message);showToast("AI unavailable — please write manually","ai");}
   if(btn){btn.disabled=false;btn.innerHTML="&#129668; Clean up";}
 }
 // ── END AI ASSIST ──────────────────────────────────────
@@ -666,7 +713,8 @@ async function handlePhotos(e,zid){
   for(const f of files){
     const r=new FileReader();
     await new Promise(res=>{r.onload=ev=>{
-      const item={data:ev.target.result,type:f.type,name:f.name,driveUrl:"",driveId:""};
+      const uniqueName=(f.name||"photo").replace(/[^\w.\-]/g,"_")+"_"+Date.now()+"_"+Math.random().toString(36).slice(2,8);
+      const item={data:ev.target.result,type:f.type,name:uniqueName,driveUrl:"",driveId:""};
       S.photos[zid]=S.photos[zid]||[];
       S.photos[zid].push(item);
       renderGrid(zid);
@@ -696,7 +744,8 @@ async function handleAfterPhotos(e,zid){
   for(const f of files){
     const r=new FileReader();
     await new Promise(res=>{r.onload=ev=>{
-      const item={data:ev.target.result,type:f.type,name:f.name,driveUrl:"",driveId:""};
+      const uniqueName=(f.name||"photo").replace(/[^\w.\-]/g,"_")+"_"+Date.now()+"_"+Math.random().toString(36).slice(2,8);
+      const item={data:ev.target.result,type:f.type,name:uniqueName,driveUrl:"",driveId:""};
       S.afterPhotos[zid].push(item);renderAfterGrid(zid);res();
     };r.readAsDataURL(f);});
     uploadToDrive(S.afterPhotos[zid][S.afterPhotos[zid].length-1],zid);
@@ -744,17 +793,23 @@ async function uploadToDrive(item,zid){
     const b64=uploadData.split(",")[1];
     const mimeType=item.type&&item.type.startsWith("video")?item.type:"image/jpeg";
     // Photo upload uses no-cors to avoid preflight (large base64 payload)
-    // Apps Script processes it and we confirm via a followup GET
+    // Apps Script processes it and we confirm via a followup GET. Videos
+    // are naturally larger and slower to land in Drive than photos, so we
+    // retry a few times with a short gap instead of one long fixed wait —
+    // this lets small photos confirm quickly rather than always waiting
+    // the full delay that only large videos actually need.
     const photoPayload={type:"uploadPhoto",folderId:S.driveFolderId,fileData:b64,mimeType:mimeType,fileName:item.name||("photo_"+Date.now())};
     await fetch(APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:JSON.stringify(photoPayload)});
-    // Small delay then check if file appeared in folder
-    await new Promise(r=>setTimeout(r,2000));
-    // Confirm via JSONP
     const checkParams=new URLSearchParams({type:"getLastUpload",folderId:S.driveFolderId,fileName:item.name||""});
-    try{
-      const chkData=await jsonpRequest(APPS_SCRIPT_URL+"?"+checkParams.toString());
-      if(chkData.status==="success"){item.driveUrl=chkData.fileUrl;item.driveId=chkData.fileId;item.thumbUrl=chkData.thumbnailUrl;}
-    }catch(e){}
+    let wait=700;
+    for(let attempt=0;attempt<4;attempt++){
+      await new Promise(r=>setTimeout(r,wait));
+      try{
+        const chkData=await jsonpRequest(APPS_SCRIPT_URL+"?"+checkParams.toString());
+        if(chkData.status==="success"){item.driveUrl=chkData.fileUrl;item.driveId=chkData.fileId;item.thumbUrl=chkData.thumbnailUrl;break;}
+      }catch(e){}
+      wait=Math.min(wait*1.6,3000);
+    }
   }catch(err){console.error("uploadToDrive exception:",err.message);}
   _pendingUploads--;
 }
@@ -791,7 +846,7 @@ function updateNav(){const n=S.screen,nav=document.getElementById("bottom-nav"),
 
 function buildReview(){
   const done=S.client.zones.filter(z=>S.zoneData[z.id]&&S.zoneData[z.id].completed).length;
-  const photos=Object.values(S.photos).flat().length;
+  const photos=Object.values(S.photos).flat().length+Object.values(S.afterPhotos||{}).flat().length;
   const tagMap={"Q1: JAN-MAR":"tq1","Q2: APR-JUN":"tq2","Q3: JUL-SEP":"tq3","Q4: OCT-DEC":"tq4","CALLOUT":"tco"};
   const tagHtml=S.serviceTypes.map(t=>`<span class="tag ${tagMap[t]||"tq1"}">${t}</span>`).join(" ");
   document.getElementById("review-content").innerHTML=
@@ -801,25 +856,25 @@ function buildReview(){
     `<div class="rr"><span class="rl2">Service Type</span><span class="rv">${tagHtml}</span></div>`+
     (S.calloutReason?`<div class="rr"><span class="rl2">Callout</span><span class="rv">${S.calloutReason}</span></div>`:"")+
     `<div class="rr"><span class="rl2">Zones Complete</span><span class="rv">${done} / ${S.client.zones.length}</span></div>`+
-    `<div class="rr"><span class="rl2">Photos</span><span class="rv">${photos} uploaded</span></div>`;
+    `<div class="rr"><span class="rl2">Photos &amp; Videos</span><span class="rv">${photos} uploaded</span></div>`;
 }
 
 async function submitReport(){
   const btn=document.getElementById("btn-next");btn.disabled=true;
   // Wait for any in-progress Drive uploads to finish (max 90 seconds)
   if(_pendingUploads>0){
-    btn.innerHTML='<span class="spin"></span>Uploading photos — please wait...';
+    btn.innerHTML='<span class="spin"></span>Uploading photos &amp; videos — please wait...';
     const start=Date.now();
     while(_pendingUploads>0&&Date.now()-start<90000){
       await new Promise(r=>setTimeout(r,600));
       const total=Object.values(S.photos).flat().length+Object.values(S.afterPhotos||{}).flat().length;
       const done=Object.values(S.photos).flat().filter(p=>p.driveUrl).length+Object.values(S.afterPhotos||{}).flat().filter(p=>p.driveUrl).length;
-      btn.innerHTML=`<span class="spin"></span>Uploading photos ${done} of ${total}...`;
+      btn.innerHTML=`<span class="spin"></span>&#9888; Uploading ${done} of ${total} — don't close or navigate away`;
     }
   }
   btn.innerHTML='<span class="spin"></span>Submitting...';
   // Build sub AFTER upload wait so driveUrls are captured
-  const sub={id:"sub_"+Date.now(),timestamp:new Date().toISOString(),clientSlug:S.slug,clientName:S.client.name,clientAddress:S.client.address,techName:S.techName,techMobile:S.techMobile,serviceDate:S.serviceDate,serviceType:S.serviceType,serviceTypes:S.serviceTypes,calloutReason:S.calloutReason,calloutReporter:S.calloutReporter,overallNotes:document.getElementById("overall-notes").value,followup:S.followup,zoneData:JSON.parse(JSON.stringify(S.zoneData)),photos:JSON.parse(JSON.stringify(S.photos)),afterPhotos:JSON.parse(JSON.stringify(S.afterPhotos||{})),photoCount:Object.values(S.photos).flat().length,driveFolderUrl:S.driveFolderUrl||""};
+  const sub={id:"sub_"+Date.now(),timestamp:new Date().toISOString(),clientSlug:S.slug,clientName:S.client.name,clientAddress:S.client.address,techName:S.techName,techMobile:S.techMobile,serviceDate:S.serviceDate,serviceType:S.serviceType,serviceTypes:S.serviceTypes,calloutReason:S.calloutReason,calloutReporter:S.calloutReporter,overallNotes:document.getElementById("overall-notes").value,followup:S.followup,zoneData:JSON.parse(JSON.stringify(S.zoneData)),photos:JSON.parse(JSON.stringify(S.photos)),afterPhotos:JSON.parse(JSON.stringify(S.afterPhotos||{})),photoCount:Object.values(S.photos).flat().length+Object.values(S.afterPhotos||{}).flat().length,driveFolderUrl:S.driveFolderUrl||""};
   SUBMISSIONS.unshift(sub);
   // Stash full-res photos AND zoneData in memory so PDF can use them this session
   SESSION_PHOTOS[sub.id]={photos:sub.photos,afterPhotos:sub.afterPhotos,zoneData:sub.zoneData};
@@ -953,7 +1008,7 @@ function updateSlugPreview(){const s=document.getElementById("e-slug").value;doc
 function copyURL(){const s=document.getElementById("e-slug").value;if(s)copyText(NETLIFY_URL+"/?client="+s);}
 function copyText(t){navigator.clipboard.writeText(t).then(()=>showToast("URL copied!")).catch(()=>{const el=document.createElement("textarea");el.value=t;document.body.appendChild(el);el.select();document.execCommand("copy");document.body.removeChild(el);showToast("URL copied!");
 });}
-function showToast(m){const t=document.getElementById("toast");t.textContent=m;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2200);}
+function showToast(m,variant){const t=document.getElementById("toast");t.textContent=m;t.classList.toggle("ai",!!variant);t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2200);}
 function renderZoneEditor(){
   const el=document.getElementById("zones-editor-wrap");
   el.innerHTML=adminZones.map((z,i)=>{
@@ -1808,7 +1863,7 @@ const win=window.open("","_blank");
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
           <div style="text-align:center;background:#fff;border-radius:8px;padding:10px;border:1px solid #e8e8ff"><div style="font-size:22px;font-weight:800;color:#1a1aff">${totalZones}</div><div style="font-size:10px;color:#888;margin-top:2px">Zones Serviced</div></div>
           <div style="text-align:center;background:#fff;border-radius:8px;padding:10px;border:1px solid #e8e8ff"><div style="font-size:22px;font-weight:800;color:#00a550">${goodZones}</div><div style="font-size:10px;color:#888;margin-top:2px">Good Condition</div></div>
-          <div style="text-align:center;background:#fff;border-radius:8px;padding:10px;border:1px solid #e8e8ff"><div style="font-size:22px;font-weight:800;color:#1a1aff">${totalBeforePhotos+totalAfterPhotos}</div><div style="font-size:10px;color:#888;margin-top:2px">Photos Captured</div></div>
+          <div style="text-align:center;background:#fff;border-radius:8px;padding:10px;border:1px solid #e8e8ff"><div style="font-size:22px;font-weight:800;color:#1a1aff">${totalBeforePhotos+totalAfterPhotos}</div><div style="font-size:10px;color:#888;margin-top:2px">Photos &amp; Videos</div></div>
           <div style="text-align:center;background:#fff;border-radius:8px;padding:10px;border:1px solid #e8e8ff"><div style="font-size:22px;font-weight:800;color:${s.followup==="Yes"?"#cc2233":"#00a550"}">${s.followup||"-"}</div><div style="font-size:10px;color:#888;margin-top:2px">Follow-up</div></div>
         </div>
         ${totalChecks>0?`<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#6b6f8a;margin-bottom:8px">Checks Passed</div>${bar("#00a550",pct,"Overall")}${goodZones>0?bar("#00a550",Math.round(goodZones/totalZones*100),"Good"):""}${medZones>0?bar("#d97000",Math.round(medZones/totalZones*100),"Medium"):""}${poorZones>0?bar("#cc2233",Math.round(poorZones/totalZones*100),"Poor"):""}`:""}</div>`;
