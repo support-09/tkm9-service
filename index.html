@@ -242,11 +242,11 @@ textarea{resize:vertical;min-height:78px}
   <div class="card"><div class="ct">Summary</div><div id="review-content"></div></div>
   <div class="card">
     <div class="ct">Overall Notes &amp; Sign-off</div>
-    <div class="field"><label>Additional Notes (optional) <button id="ai-clean-btn-overall" onclick="aiCleanField('overall-notes','ai-clean-btn-overall')" class="ai-btn" style="float:right;display:none">&#129668; Clean up</button></label><textarea id="overall-notes" placeholder="Further observations, follow-up items, notes for TKM9 Service Desk&hellip;"></textarea></div>
     <div class="yw">
       <div class="yq">Is follow-up work required?</div>
       <div class="yr"><button class="yb yes" data-field="followup" data-val="Yes">Yes</button><button class="yb no" data-field="followup" data-val="No">No</button></div>
     </div>
+    <div class="field"><label>Additional Notes (optional) <button id="ai-clean-btn-overall" onclick="aiCleanField('overall-notes','ai-clean-btn-overall')" class="ai-btn" style="float:right;display:none">&#129668; Clean up</button></label><textarea id="overall-notes" placeholder="Further observations, follow-up items, notes for TKM9 Service Desk&hellip;"></textarea></div>
     <div class="yw" style="margin-bottom:0">
       <div class="yq">I confirm this service has been completed.</div>
       <div class="yr"><button class="yb yes" data-field="ack" data-val="confirmed" style="flex:none;padding:12px 28px">Confirm &#10003;</button></div>
@@ -797,13 +797,13 @@ async function uploadToDrive(item,zid){
     await fetch(APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:JSON.stringify(photoPayload)});
     const checkParams=new URLSearchParams({type:"getLastUpload",folderId:S.driveFolderId,fileName:item.name||""});
     let wait=700;
-    for(let attempt=0;attempt<4;attempt++){
+    for(let attempt=0;attempt<7;attempt++){
       await new Promise(r=>setTimeout(r,wait));
       try{
         const chkData=await jsonpRequest(APPS_SCRIPT_URL+"?"+checkParams.toString());
         if(chkData.status==="success"){item.driveUrl=chkData.fileUrl;item.driveId=chkData.fileId;item.thumbUrl=chkData.thumbnailUrl;break;}
       }catch(e){}
-      wait=Math.min(wait*1.6,3000);
+      wait=Math.min(wait*1.6,4000);
     }
   }catch(err){console.error("uploadToDrive exception:",err.message);}
   _pendingUploads--;
@@ -1887,6 +1887,12 @@ const win=window.open("","_blank");
   </div>
   </body></html>`);
   win.document.close();
+  // Open the Save/Print dialog immediately — the button above still works
+  // as a manual fallback if this gets blocked or dismissed by accident.
+  // Set directly on the new window rather than writing a script tag into
+  // the HTML string above, since that literal closing tag text would have
+  // prematurely closed our own outer script block.
+  win.onload=function(){ setTimeout(function(){ win.print(); }, 400); };
 }
 
 function exitAdmin(){window.location.href=window.location.pathname+"?admin";}
