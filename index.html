@@ -33,7 +33,7 @@ body{background:var(--bg);color:var(--txt);font-family:'DM Sans',sans-serif;font
 .zmedia-photos{display:grid;gap:6px;margin-bottom:6px}
 .zmedia-photos.single{grid-template-columns:1fr}
 .zmedia-photos.multi{grid-template-columns:1fr 1fr}
-.zmedia-photos img{width:100%;border-radius:var(--rsm);object-fit:cover;max-height:180px;display:block}
+.zmedia-photos img{width:100%;border-radius:var(--rsm);object-fit:contain;background:#f0f0f5;max-height:180px;display:block}
 .zmedia-fp{width:100%;border-radius:var(--rsm);object-fit:contain;max-height:140px;display:block;background:var(--su2)}
 .zmedia-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--mut);margin-bottom:4px;margin-top:8px}
 .card{background:var(--sur);border:1px solid var(--bor);border-radius:var(--rad);padding:17px;margin-bottom:13px;box-shadow:var(--shd)}
@@ -87,7 +87,7 @@ textarea{resize:vertical;min-height:78px}
 .pa-btn input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
 .pg{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:8px}
 .pt{aspect-ratio:1;border-radius:var(--rsm);overflow:hidden;position:relative;background:var(--su2)}
-.pt img,.pt video{width:100%;height:100%;object-fit:cover}
+.pt img,.pt video{width:100%;height:100%;object-fit:contain;background:#0e0e22}
 .pdel{position:absolute;top:3px;right:3px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:22px;height:22px;color:#fff;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1}
 .upload-prog{height:3px;background:var(--bor);border-radius:2px;margin-top:6px;overflow:hidden;display:none}
 .upload-prog-fill{height:100%;background:var(--blue);transition:width .3s}
@@ -164,7 +164,7 @@ textarea{resize:vertical;min-height:78px}
 .urlbox{background:var(--bl);border-radius:var(--rsm);padding:12px 14px;font-family:'DM Mono',monospace;font-size:12px;color:var(--blue);word-break:break-all;margin-top:10px;cursor:pointer;border:1px solid var(--blue)}
 .zphumb{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .zphumb-item{position:relative;width:70px;height:70px;border-radius:6px;overflow:hidden;background:var(--su2)}
-.zphumb-item img{width:100%;height:100%;object-fit:cover}
+.zphumb-item img{width:100%;height:100%;object-fit:contain;background:#f0f0f5}
 .zphumb-del{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .zpuarea{border:2px dashed var(--bor);border-radius:var(--rsm);padding:10px;text-align:center;cursor:pointer;position:relative;margin-top:8px;background:var(--su2);font-size:12px;color:var(--mut)}
 .zpuarea input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
@@ -729,7 +729,7 @@ function renderAfterGrid(zid){
   g.innerHTML=(S.afterPhotos[zid]||[]).map((item,i)=>{
     const src=item.data||item;
     const isVid=item.type&&item.type.startsWith("video");
-    return `<div class="pt">${isVid?`<video style="width:100%;height:100%;object-fit:cover"><source src="${src}"></video>`:`<img src="${src}" alt="">`}<button class="pdel" onclick="delAfterPhoto('${zid}',${i})">&#215;</button></div>`;
+    return `<div class="pt">${isVid?`<video style="width:100%;height:100%;object-fit:cover" controls preload="metadata"><source src="${src}"></video>`:`<img src="${src}" alt="">`}<button class="pdel" onclick="delAfterPhoto('${zid}',${i})">&#215;</button></div>`;
   }).join("");
 }
 function delAfterPhoto(zid,i){S.afterPhotos[zid].splice(i,1);renderAfterGrid(zid);}
@@ -815,7 +815,7 @@ function renderGrid(zid){
     const src=item.data||item;
     const isVid=item.type&&item.type.startsWith("video");
     const thumb=item.thumbUrl?"":"";
-    return `<div class="pt">${isVid?`<video style="width:100%;height:100%;object-fit:cover"><source src="${src}"></video>`:`<img src="${src}" alt="">`}<button class="pdel" onclick="delPhoto('${zid}',${i})">&#215;</button></div>`;
+    return `<div class="pt">${isVid?`<video style="width:100%;height:100%;object-fit:cover" controls preload="metadata"><source src="${src}"></video>`:`<img src="${src}" alt="">`}<button class="pdel" onclick="delPhoto('${zid}',${i})">&#215;</button></div>`;
   }).join("");
 }
 function delPhoto(zid,i){S.photos[zid].splice(i,1);renderGrid(zid);}
@@ -1353,9 +1353,9 @@ function viewSubmission(i){
           const src=photoSrc(p);
           const isVid=typeof p==="object"&&p.type&&p.type.startsWith("video");
           const driveUrl=typeof p==="object"&&p.driveUrl?p.driveUrl:"";
-          if(driveUrl){html+=`<a href="${driveUrl}" target="_blank"><img src="${photoSrc(p)}" style="width:80px;height:60px;object-fit:cover;border-radius:6px;cursor:pointer"></a>`;}
+          if(driveUrl){html+=`<a href="${driveUrl}" target="_blank"><img src="${photoSrc(p)}" style="width:80px;height:60px;object-fit:contain;background:#f0f0f5;border-radius:6px;cursor:pointer"></a>`;}
           else if(isVid){html+=`<a href="${src}" target="_blank" style="display:flex;align-items:center;justify-content:center;width:80px;height:60px;background:var(--su2);border-radius:6px;color:var(--blue);font-size:11px;font-weight:600;text-decoration:none">&#9654; Video</a>`;}
-          else{html+=`<img src="${src}" style="width:80px;height:60px;object-fit:cover;border-radius:6px">`;}
+          else{html+=`<img src="${src}" style="width:80px;height:60px;object-fit:contain;background:#f0f0f5;border-radius:6px">`;}
         });
         html+="</div>";
       }
@@ -1371,9 +1371,9 @@ function viewSubmission(i){
           const src=photoSrc(p);
           const driveUrl=typeof p==="object"&&p.driveUrl?p.driveUrl:"";
           const isVid=typeof p==="object"&&p.type&&p.type.startsWith("video");
-          if(driveUrl){html+=`<a href="${driveUrl}" target="_blank"><img src="${photoSrc(p)}" style="width:80px;height:60px;object-fit:cover;border-radius:6px"></a>`;}
+          if(driveUrl){html+=`<a href="${driveUrl}" target="_blank"><img src="${photoSrc(p)}" style="width:80px;height:60px;object-fit:contain;background:#f0f0f5;border-radius:6px"></a>`;}
           else if(isVid){html+=`<div style="display:flex;align-items:center;justify-content:center;width:80px;height:60px;background:var(--su2);border-radius:6px;font-size:11px;color:var(--grn);font-weight:600">▶ After</div>`;}
-          else if(src){html+=`<img src="${src}" style="width:80px;height:60px;object-fit:cover;border-radius:6px">`;}
+          else if(src){html+=`<img src="${src}" style="width:80px;height:60px;object-fit:contain;background:#f0f0f5;border-radius:6px">`;}
         });
         html+="</div>";
       }
@@ -1501,29 +1501,31 @@ function editSubmission(){
       html+=`<div style="font-size:11px;font-weight:700;color:var(--mut);margin-bottom:6px;text-transform:uppercase;letter-spacing:.07em">&#128247; Before Service Photos & Video</div>`;
       html+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">';
       (s.photos[zid]||[]).forEach((p,pi)=>{
-        const src=photoSrc(p);const isVid=typeof p==="object"&&p.type&&p.type.startsWith("video");const driveUrl=typeof p==="object"&&p.driveUrl?p.driveUrl:"";
-        const playable=driveUrl||src;
+        const src=photoSrc(p);const isVid=typeof p==="object"&&p.type&&p.type.startsWith("video");const driveUrl=typeof p==="object"&&p.driveUrl?p.driveUrl:"";const driveId=typeof p==="object"&&p.driveId?p.driveId:"";
+        // Prefer Drive's own hosted viewer (plays formats like .mov) over the raw file link, which just downloads
+        const playable=driveId?("https://drive.google.com/file/d/"+driveId+"/view"):(driveUrl||src);
         if(isVid&&playable){html+=`<div style="position:relative"><a href="${playable}" target="_blank" style="display:flex;align-items:center;justify-content:center;width:80px;height:60px;background:#0e0e22;border-radius:6px;color:#fff;font-size:11px;font-weight:600;text-decoration:none">&#9654; Video</a><button onclick="editDeletePhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer">&#215;</button></div>`;}
         else if(isVid){html+=`<div style="position:relative"><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:80px;height:60px;background:#f5f5fa;border:1px dashed #ccc;border-radius:6px;color:#999;font-size:10px;font-weight:600;text-align:center;line-height:1.3">&#9888;<br>Unavailable</div><button onclick="editDeletePhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer">&#215;</button></div>`;}
-        else if(src){html+=`<div style="position:relative"><img src="${src}" style="width:80px;height:60px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="editViewPhoto(${pi},'${zid}')"><button onclick="editDeletePhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer">&#215;</button></div>`;}
+        else if(src){html+=`<div style="position:relative"><img src="${src}" style="width:80px;height:60px;object-fit:contain;background:#f0f0f5;border-radius:6px;cursor:pointer" onclick="editViewPhoto(${pi},'${zid}')"><button onclick="editDeletePhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer">&#215;</button></div>`;}
         else{html+=`<div style="position:relative"><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:80px;height:60px;background:#f5f5fa;border:1px dashed #ccc;border-radius:6px;color:#999;font-size:10px;font-weight:600;text-align:center;line-height:1.3">&#9888;<br>Unavailable</div><button onclick="editDeletePhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer">&#215;</button></div>`;}
       });
       html+='</div>';
-      html+=`<div class="pa-btn" style="width:fit-content;margin-bottom:16px;padding:8px 14px;font-size:12px"><input type="file" accept="image/*,video/*" multiple onchange="editAddPhotos(event,'${zid}','before')">&#128247; Add Before Photos</div>`;
+      html+=`<div class="pa-btn" style="width:fit-content;margin-bottom:16px;padding:8px 14px;font-size:12px"><input type="file" accept="image/*,video/*" multiple onchange="editAddPhotos(event,'${zid}','before')">&#128247; Add Before Photos &amp; Video</div>`;
       // ── AFTER SERVICE PHOTOS ──
       s.afterPhotos=s.afterPhotos||{};s.afterPhotos[zid]=s.afterPhotos[zid]||[];
       html+=`<div style="font-size:11px;font-weight:700;color:var(--grn);margin-bottom:6px;text-transform:uppercase;letter-spacing:.07em">&#128247; After Service Photos & Video</div>`;
       html+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">';
       (s.afterPhotos[zid]||[]).forEach((p,pi)=>{
-        const src=photoSrc(p);const isVid=typeof p==="object"&&p.type&&p.type.startsWith("video");const driveUrl=typeof p==="object"&&p.driveUrl?p.driveUrl:"";
-        const playable=driveUrl||src;
+        const src=photoSrc(p);const isVid=typeof p==="object"&&p.type&&p.type.startsWith("video");const driveUrl=typeof p==="object"&&p.driveUrl?p.driveUrl:"";const driveId=typeof p==="object"&&p.driveId?p.driveId:"";
+        // Prefer Drive's own hosted viewer (plays formats like .mov) over the raw file link, which just downloads
+        const playable=driveId?("https://drive.google.com/file/d/"+driveId+"/view"):(driveUrl||src);
         if(isVid&&playable){html+=`<div style="position:relative"><a href="${playable}" target="_blank" style="display:flex;align-items:center;justify-content:center;width:80px;height:60px;background:#0e0e22;border-radius:6px;color:#fff;font-size:11px;font-weight:600;text-decoration:none">&#9654; Video</a><button onclick="editDeleteAfterPhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer">&#215;</button></div>`;}
         else if(isVid){html+=`<div style="position:relative"><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:80px;height:60px;background:#f5f5fa;border:1px dashed #ccc;border-radius:6px;color:#999;font-size:10px;font-weight:600;text-align:center;line-height:1.3">&#9888;<br>Unavailable</div><button onclick="editDeleteAfterPhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer">&#215;</button></div>`;}
-        else if(src){html+=`<div style="position:relative"><img src="${src}" style="width:80px;height:60px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="editViewAfterPhoto(${pi},'${zid}')"><button onclick="editDeleteAfterPhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer">&#215;</button></div>`;}
+        else if(src){html+=`<div style="position:relative"><img src="${src}" style="width:80px;height:60px;object-fit:contain;background:#f0f0f5;border-radius:6px;cursor:pointer" onclick="editViewAfterPhoto(${pi},'${zid}')"><button onclick="editDeleteAfterPhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer">&#215;</button></div>`;}
         else{html+=`<div style="position:relative"><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:80px;height:60px;background:#f5f5fa;border:1px dashed #ccc;border-radius:6px;color:#999;font-size:10px;font-weight:600;text-align:center;line-height:1.3">&#9888;<br>Unavailable</div><button onclick="editDeleteAfterPhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer">&#215;</button></div>`;}
       });
       html+='</div>';
-      html+=`<div class="pa-btn" style="width:fit-content;margin-bottom:8px;padding:8px 14px;font-size:12px;border-color:var(--grn);color:var(--grn)"><input type="file" accept="image/*,video/*" multiple onchange="editAddPhotos(event,'${zid}','after')">&#128247; Add After Photos</div>`;
+      html+=`<div class="pa-btn" style="width:fit-content;margin-bottom:8px;padding:8px 14px;font-size:12px;border-color:var(--grn);color:var(--grn)"><input type="file" accept="image/*,video/*" multiple onchange="editAddPhotos(event,'${zid}','after')">&#128247; Add After Photos &amp; Video</div>`;
       html+='</div>';
     });
   }
@@ -1657,7 +1659,7 @@ function downloadSubPDF(){
       const refPhotos=(zoneData?.photos||[]).filter(p=>p&&typeof p==="string"&&p.startsWith("http"));
       if(refPhotos.length){
         refSection+=`<div style="margin-bottom:20px"><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#6b6f8a;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #eee">Reference Photos</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px">`;
-        refPhotos.forEach(p=>{refSection+=`<img src="${p}" style="width:100%;height:140px;object-fit:cover;border-radius:8px;border:1px solid #eee">`;});
+        refPhotos.forEach(p=>{refSection+=`<img src="${p}" style="width:100%;height:140px;object-fit:contain;background:#f0f0f5;border-radius:8px;border:1px solid #eee">`;});
         refSection+=`</div></div>`;
       }
 
@@ -1741,7 +1743,7 @@ function downloadSubPDF(){
             if(src){
               // onerror: if Drive embed fails, replace with a link tile
               const fallback=driveUrl?`this.outerHTML='<a href=&quot;${driveUrl}&quot; target=&quot;_blank&quot; style=&quot;display:flex;flex-direction:column;align-items:center;justify-content:center;height:130px;background:#f0f4ff;border-radius:8px;border:1px solid #c8d4ff;text-decoration:none;color:#1a1aff;font-size:11px;font-weight:600;text-align:center;padding:8px&quot;>&#128247;<br>View Photo</a>'`:`this.outerHTML='<div style=&quot;display:flex;flex-direction:column;align-items:center;justify-content:center;height:130px;background:#f5f5fa;border:1px dashed #ccc;border-radius:8px;color:#999;font-size:11px;font-weight:600;text-align:center&quot;>&#9888;<br>Unavailable</div>'`;
-              h+=`<img src="${src}" style="width:100%;height:130px;object-fit:cover;border-radius:8px;border:1px solid #eee" onerror="${fallback}">`;
+              h+=`<img src="${src}" style="width:100%;height:130px;object-fit:contain;background:#f0f0f5;border-radius:8px;border:1px solid #eee" onerror="${fallback}">`;
             } else if(driveUrl){
               h+=`<a href="${driveUrl}" target="_blank" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:130px;background:#f0f4ff;border-radius:8px;border:1px solid #c8d4ff;text-decoration:none;color:#1a1aff;font-size:11px;font-weight:600;text-align:center;padding:8px">&#128247;<br>View Photo</a>`;
             } else {
@@ -1757,10 +1759,13 @@ function downloadSubPDF(){
             const url=typeof p==="object"?(p.driveUrl||""):"";
             const driveId=typeof p==="object"?(p.driveId||""):"";
             if(src){
-              h+=`<div style="position:relative;width:160px;height:110px;background:#0e0e22;border-radius:8px;overflow:hidden"><video style="width:100%;height:100%;object-fit:cover" src="${src}"></video><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none"><span style="font-size:28px;opacity:.9">▶</span></div></div>`;
+              h+=`<div style="position:relative;width:160px;height:110px;background:#0e0e22;border-radius:8px;overflow:hidden"><video style="width:100%;height:100%;object-fit:cover" src="${src}" controls preload="metadata"></video></div>`;
             } else if(url||driveId){
-              // Video: link to Drive to play
-              const openUrl=url||`https://drive.google.com/file/d/${driveId}/view`;
+              // Use Drive's own hosted viewer page when we have a driveId —
+              // it can preview formats like .mov that browsers can't play
+              // inline from a raw file link, which otherwise just triggers
+              // a download with no proper filename.
+              const openUrl=driveId?`https://drive.google.com/file/d/${driveId}/view`:url;
               h+=`<a href="${openUrl}" target="_blank" style="position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;width:160px;height:110px;background:#0e0e22;border-radius:8px;color:#fff;font-size:13px;font-weight:700;text-decoration:none;overflow:hidden"><span style="position:relative;font-size:22px">▶</span><span style="position:relative;font-size:11px;margin-top:4px">View Video</span></a>`;
             } else {
               h+=`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:160px;height:110px;background:#f5f5fa;border:1px dashed #ccc;border-radius:8px;color:#999;font-size:11px;font-weight:600;text-align:center">&#9888;<br>Unavailable</div>`;
