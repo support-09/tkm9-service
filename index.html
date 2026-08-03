@@ -1187,7 +1187,10 @@ function goHome(){
     document.getElementById("subs-list-panel").style.display="none";
     showTab("clients");
   } else {
-    window.location.href=window.location.pathname;
+    // Reset back to a fresh Step 1 for this same client, instead of
+    // reloading the page — reloading dropped the ?client= part of the
+    // link, which is what caused the "Invalid Link" screen.
+    hardReset();
   }
 }
 function filterSubmissions(){
@@ -1447,8 +1450,11 @@ function editSubmission(){
       html+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">';
       (s.photos[zid]||[]).forEach((p,pi)=>{
         const src=photoSrc(p);const isVid=typeof p==="object"&&p.type&&p.type.startsWith("video");const driveUrl=typeof p==="object"&&p.driveUrl?p.driveUrl:"";
-        if(isVid){html+=`<div style="position:relative"><a href="${driveUrl||src||'#'}" target="_blank" style="display:flex;align-items:center;justify-content:center;width:80px;height:60px;background:#0e0e22;border-radius:6px;color:#fff;font-size:11px;font-weight:600;text-decoration:none">&#9654; Video</a><button onclick="editDeletePhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer">&#215;</button></div>`;}
+        const playable=driveUrl||src;
+        if(isVid&&playable){html+=`<div style="position:relative"><a href="${playable}" target="_blank" style="display:flex;align-items:center;justify-content:center;width:80px;height:60px;background:#0e0e22;border-radius:6px;color:#fff;font-size:11px;font-weight:600;text-decoration:none">&#9654; Video</a><button onclick="editDeletePhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer">&#215;</button></div>`;}
+        else if(isVid){html+=`<div style="position:relative"><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:80px;height:60px;background:#f5f5fa;border:1px dashed #ccc;border-radius:6px;color:#999;font-size:10px;font-weight:600;text-align:center;line-height:1.3">&#9888;<br>Unavailable</div><button onclick="editDeletePhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer">&#215;</button></div>`;}
         else if(src){html+=`<div style="position:relative"><img src="${src}" style="width:80px;height:60px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="editViewPhoto(${pi},'${zid}')"><button onclick="editDeletePhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer">&#215;</button></div>`;}
+        else{html+=`<div style="position:relative"><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:80px;height:60px;background:#f5f5fa;border:1px dashed #ccc;border-radius:6px;color:#999;font-size:10px;font-weight:600;text-align:center;line-height:1.3">&#9888;<br>Unavailable</div><button onclick="editDeletePhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer">&#215;</button></div>`;}
       });
       html+='</div>';
       html+=`<div class="pa-btn" style="width:fit-content;margin-bottom:16px;padding:8px 14px;font-size:12px"><input type="file" accept="image/*,video/*" multiple onchange="editAddPhotos(event,'${zid}','before')">&#128247; Add Before Photos</div>`;
@@ -1458,8 +1464,11 @@ function editSubmission(){
       html+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">';
       (s.afterPhotos[zid]||[]).forEach((p,pi)=>{
         const src=photoSrc(p);const isVid=typeof p==="object"&&p.type&&p.type.startsWith("video");const driveUrl=typeof p==="object"&&p.driveUrl?p.driveUrl:"";
-        if(isVid){html+=`<div style="position:relative"><a href="${driveUrl||src||'#'}" target="_blank" style="display:flex;align-items:center;justify-content:center;width:80px;height:60px;background:#0e0e22;border-radius:6px;color:#fff;font-size:11px;font-weight:600;text-decoration:none">&#9654; Video</a><button onclick="editDeleteAfterPhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer">&#215;</button></div>`;}
+        const playable=driveUrl||src;
+        if(isVid&&playable){html+=`<div style="position:relative"><a href="${playable}" target="_blank" style="display:flex;align-items:center;justify-content:center;width:80px;height:60px;background:#0e0e22;border-radius:6px;color:#fff;font-size:11px;font-weight:600;text-decoration:none">&#9654; Video</a><button onclick="editDeleteAfterPhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer">&#215;</button></div>`;}
+        else if(isVid){html+=`<div style="position:relative"><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:80px;height:60px;background:#f5f5fa;border:1px dashed #ccc;border-radius:6px;color:#999;font-size:10px;font-weight:600;text-align:center;line-height:1.3">&#9888;<br>Unavailable</div><button onclick="editDeleteAfterPhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer">&#215;</button></div>`;}
         else if(src){html+=`<div style="position:relative"><img src="${src}" style="width:80px;height:60px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="editViewAfterPhoto(${pi},'${zid}')"><button onclick="editDeleteAfterPhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer">&#215;</button></div>`;}
+        else{html+=`<div style="position:relative"><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:80px;height:60px;background:#f5f5fa;border:1px dashed #ccc;border-radius:6px;color:#999;font-size:10px;font-weight:600;text-align:center;line-height:1.3">&#9888;<br>Unavailable</div><button onclick="editDeleteAfterPhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer">&#215;</button></div>`;}
       });
       html+='</div>';
       html+=`<div class="pa-btn" style="width:fit-content;margin-bottom:8px;padding:8px 14px;font-size:12px;border-color:var(--grn);color:var(--grn)"><input type="file" accept="image/*,video/*" multiple onchange="editAddPhotos(event,'${zid}','after')">&#128247; Add After Photos</div>`;
@@ -1679,7 +1688,7 @@ function downloadSubPDF(){
             const driveUrl=typeof p==="object"?(p.driveUrl||""):"";
             if(src){
               // onerror: if Drive embed fails, replace with a link tile
-              const fallback=driveUrl?`this.outerHTML='<a href=\"${driveUrl}\" target=\"_blank\" style=\"display:flex;flex-direction:column;align-items:center;justify-content:center;height:130px;background:#f0f4ff;border-radius:8px;border:1px solid #c8d4ff;text-decoration:none;color:#1a1aff;font-size:11px;font-weight:600;text-align:center;padding:8px\">&#128247;<br>View Photo</a>'`:`this.style.display='none'`;
+              const fallback=driveUrl?`this.outerHTML='<a href=&quot;${driveUrl}&quot; target=&quot;_blank&quot; style=&quot;display:flex;flex-direction:column;align-items:center;justify-content:center;height:130px;background:#f0f4ff;border-radius:8px;border:1px solid #c8d4ff;text-decoration:none;color:#1a1aff;font-size:11px;font-weight:600;text-align:center;padding:8px&quot;>&#128247;<br>View Photo</a>'`:`this.style.display='none'`;
               h+=`<img src="${src}" style="width:100%;height:130px;object-fit:cover;border-radius:8px;border:1px solid #eee" onerror="${fallback}">`;
             } else if(driveUrl){
               h+=`<a href="${driveUrl}" target="_blank" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:130px;background:#f0f4ff;border-radius:8px;border:1px solid #c8d4ff;text-decoration:none;color:#1a1aff;font-size:11px;font-weight:600;text-align:center;padding:8px">&#128247;<br>View Photo</a>`;
@@ -1755,12 +1764,12 @@ const win=window.open("","_blank");
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;padding-bottom:16px;border-bottom:2px solid #f0f0f8">
       <div>
         <div style="font-size:26px;font-weight:800;color:#0a0a1a;margin-bottom:5px">${s.clientName||""}</div>
-        <div style="font-size:13px;color:#6b6f8a">📍 ${s.clientAddress||""}</div>
+        <div style="font-size:13px;color:#6b6f8a">📍 ${s.clientAddress||""}${s.clientAddress?` — <a href="https://maps.google.com/maps?q=${encodeURIComponent(s.clientAddress)}" target="_blank" style="color:#1a1aff">Open in Google Maps ↗</a>`:""}</div>
       </div>
       <div style="text-align:right">${tags}</div>
     </div>
 
-    ${clientResolved&&clientResolved.address?`<div style="margin-bottom:20px;border-radius:10px;overflow:hidden;border:1px solid #e0e0f0"><img src="https://staticmap.openstreetmap.de/staticmap.php?center=${encodeURIComponent(clientResolved.address)}&zoom=15&size=760x160&maptype=mapnik&markers=${encodeURIComponent(clientResolved.address)},red-pushpin" style="width:100%;height:160px;object-fit:cover;display:block" onerror="this.outerHTML='<div style=&quot;background:#f0f4ff;padding:14px 18px;display:flex;align-items:center;gap:12px&quot;><span style=&quot;font-size:20px&quot;>📍</span><div><div style=&quot;font-weight:700;font-size:12px;color:#1a1aff&quot;>Location</div><div style=&quot;font-size:13px&quot;>${clientResolved.address.replace(/'/g,"\'")}</div></div></div>'"><div style="background:#f0f4ff;padding:8px 14px;font-size:11px;color:#1a1aff;border-top:1px solid #e0e0f0">📍 ${clientResolved.address} — <a href=&quot;https://maps.google.com/maps?q=${encodeURIComponent(clientResolved.address)}&quot; target=&quot;_blank&quot; style=&quot;color:#1a1aff&quot;>Open in Google Maps ↗</a></div></div>`:""}
+    ${clientResolved&&clientResolved.address?`<div style="margin-bottom:20px;border-radius:10px;overflow:hidden;border:1px solid #e0e0f0"><img src="https://staticmap.openstreetmap.de/staticmap.php?center=${encodeURIComponent(clientResolved.address)}&zoom=15&size=760x160&maptype=mapnik&markers=${encodeURIComponent(clientResolved.address)},red-pushpin" style="width:100%;height:160px;object-fit:cover;display:block" onerror="this.parentElement.style.display='none'"></div>`:""}
 
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:24px">
       <div style="background:#f8f8ff;border-radius:10px;padding:14px 16px;border:1px solid #e8e8ff">
