@@ -115,6 +115,7 @@ textarea{resize:vertical;min-height:78px}
 .ai-btn-pill{background:#fff0f7;border:1.5px solid #ffc2e0;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:700;color:#e6197a;cursor:pointer;font-family:'DM Sans',sans-serif;display:inline-flex;align-items:center;gap:5px}
 .ai-btn-pill:disabled{opacity:.5;cursor:default}
 .spin{display:inline-block;width:17px;height:17px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:7px}
+.spin-dark{display:inline-block;width:16px;height:16px;border:2px solid var(--bor);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle}
 @keyframes spin{to{transform:rotate(360deg)}}
 .toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:#0e0e22;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
 .toast.ai{background:#e6197a}
@@ -530,7 +531,7 @@ function mkZBody(z){
   if(z.hasSound&&z.soundItems&&z.soundItems.length){h+=`<div class="sh">Sound</div><div class="sbox">Items to check: <strong>${z.soundItems.join(", ")}</strong></div>`;h+=yn(z.id,"soundOk","Sound working on ALL items?");h+=yn(z.id,"volumeOk","Volume level adequate?");}
   if(z.hasLight&&z.lightItems&&z.lightItems.length){h+=`<div class="sh">Lighting</div><div class="sbox">Items to check: <strong>${z.lightItems.join(", ")}</strong></div>`;h+=yn(z.id,"lightOk","Lighting working on ALL items?");}
   if(z.hasOther&&z.otherItems&&z.otherItems.length){h+=`<div class="sh">Other</div><div class="sbox">Items to check: <strong>${z.otherItems.join(", ")}</strong></div>`;h+=yn(z.id,"otherOk","All other items checked and OK?");}
-  h+=`<div class="sh">Zone Summary</div><div class="field"><label>Summary / Items to Flag${S.assisted?` <button id="ai-sum-btn-${z.id}" onclick="aiZoneSummary('${z.id}')" class="ai-btn" style="float:right">&#129668; Generate summary</button>`:"" }</label><textarea id="zn-${z.id}" oninput="sf('${z.id}','zoneNote',this.value)"></textarea></div>`;h+='<div class="sh">Photos &amp; Video — After Service</div>';h+=`<div class="pa-btns"><div class="pa-btn"><input type="file" id="pia-cam-${z.id}" accept="image/*" capture="environment">&#128247; Take Photo</div><div class="pa-btn"><input type="file" id="pia-vid-${z.id}" accept="video/*" capture="environment">&#127909; Record Video</div><div class="pa-btn"><input type="file" id="pia-lib-${z.id}" accept="image/*,video/*" multiple>&#128248; From Library</div></div>`;h+=`<div class="pg" id="pga-${z.id}"></div>`;
+  h+=`<div class="sh">Zone Summary</div><div class="field"><label>Summary / Items to Flag${S.assisted?` <button id="ai-sum-btn-${z.id}" onclick="aiZoneSummary('${z.id}')" class="ai-btn" style="float:right">&#129668; Generate summary</button>`:"" }</label><textarea id="zn-${z.id}" style="min-height:150px" oninput="sf('${z.id}','zoneNote',this.value);autoGrow(this)"></textarea></div>`;h+='<div class="sh">Photos &amp; Video — After Service</div>';h+=`<div class="pa-btns"><div class="pa-btn"><input type="file" id="pia-cam-${z.id}" accept="image/*" capture="environment">&#128247; Take Photo</div><div class="pa-btn"><input type="file" id="pia-vid-${z.id}" accept="video/*" capture="environment">&#127909; Record Video</div><div class="pa-btn"><input type="file" id="pia-lib-${z.id}" accept="image/*,video/*" multiple>&#128248; From Library</div></div>`;h+=`<div class="pg" id="pga-${z.id}"></div>`;
   h+=`<button class="mdb" onclick="markDone('${z.id}')">Mark Zone Complete &#10003;</button>`;
   return h;
 }
@@ -586,7 +587,7 @@ function fillFromLastVisit(zid){
     }
   });
   // Fill zone summary
-  if(z.zoneNote){const el=document.getElementById("zn-"+zid);if(el){el.value=z.zoneNote;sf(zid,"zoneNote",z.zoneNote);}}
+  if(z.zoneNote){const el=document.getElementById("zn-"+zid);if(el){el.value=z.zoneNote;sf(zid,"zoneNote",z.zoneNote);autoGrow(el);}}
   showToast("Filled from last visit — review and update what's changed","ai");
 }
 
@@ -626,7 +627,9 @@ async function aiZoneSummaryEdit(zid,zoneName){
       (isGood?passed:failed).push(checkLabels[k]);
     }
   });
-  const prompt=`Write a concise 2-3 sentence professional zone service summary for a client-facing report.
+  const prompt=`Write like an experienced field technician reporting plainly and confidently to a facilities manager — clear, direct, no corporate jargon, no filler words. Short, matter-of-fact sentences.
+
+Write a concise 2-3 sentence zone service summary for a client-facing report.
 
 Zone: ${zoneName}
 Condition on arrival: ${condition||"not recorded"}${condNote?" — "+condNote:""}
@@ -677,7 +680,9 @@ async function aiZoneSummary(zid){
     const isGood=checkInverted.has(k)?v==="No":v==="Yes";
     (isGood?passed:failed).push(label);
   });
-  const prompt=`Write a concise 2-3 sentence professional zone service summary for a client-facing report.
+  const prompt=`Write like an experienced field technician reporting plainly and confidently to a facilities manager — clear, direct, no corporate jargon, no filler words. Short, matter-of-fact sentences.
+
+Write a concise 2-3 sentence zone service summary for a client-facing report.
 
 Zone: ${zoneName}
 Site: ${S.client.name}
@@ -689,10 +694,10 @@ Existing notes: ${z.zoneNote||"none"}
 Focus on what was found and any items requiring follow-up. Be specific and professional. Do not use bullet points.`;
   try{
     const text=await callAI(prompt,200);
-    if(el){el.value=text.trim();sf(zid,"zoneNote",text.trim());}
+    if(el){el.value=text.trim();sf(zid,"zoneNote",text.trim());autoGrow(el);}
     showToast("Summary generated — edit as needed","ai");
     if(btn&&el){
-      aiArmUndo(btn,el,previousValue,"&#129668; Generate summary",(prev)=>{el.value=prev;sf(zid,"zoneNote",prev);});
+      aiArmUndo(btn,el,previousValue,"&#129668; Generate summary",(prev)=>{el.value=prev;sf(zid,"zoneNote",prev);autoGrow(el);});
       return;
     }
   }catch(e){console.error("AI summary error:",e.message);showToast("AI unavailable — please write manually","ai");}
@@ -707,7 +712,9 @@ async function aiCleanNote(zid,field,textareaId){
   const btn=document.getElementById("ai-clean-btn-"+zid+"-"+field);
   const previousValue=el.value;
   if(btn){btn.disabled=true;btn.textContent="Cleaning...";}
-  const prompt=`Rewrite these rough service notes into clean, professional language for a client-facing report. Keep the same meaning. Be concise. Return only the rewritten text, nothing else.
+  const prompt=`Write like an experienced field technician reporting plainly and confidently to a facilities manager — clear, direct, no corporate jargon, no filler words. Short, matter-of-fact sentences.
+
+Rewrite these rough service notes accordingly for a client-facing report. Keep the same meaning. Be concise. Return only the rewritten text, nothing else.
 
 Notes: ${el.value.trim()}`;
   try{
@@ -741,7 +748,9 @@ async function aiCleanField(inputId,btnId){
   const btn=document.getElementById(btnId);
   const previousValue=el.value;
   if(btn){btn.disabled=true;btn.textContent="Cleaning...";}
-  const prompt=`Rewrite this into clean, professional language for a client-facing service report. Keep the same meaning. Be concise. Return only the rewritten text, nothing else.
+  const prompt=`Write like an experienced field technician reporting plainly and confidently to a facilities manager — clear, direct, no corporate jargon, no filler words. Short, matter-of-fact sentences.
+
+Rewrite this accordingly for a client-facing service report. Keep the same meaning. Be concise. Return only the rewritten text, nothing else.
 
 Text: ${el.value.trim()}`;
   try{
@@ -1079,6 +1088,7 @@ function updateSlugPreview(){const s=document.getElementById("e-slug").value;doc
 function copyURL(){const s=document.getElementById("e-slug").value;if(s)copyText(NETLIFY_URL+"/?client="+s);}
 function copyText(t){navigator.clipboard.writeText(t).then(()=>showToast("URL copied!")).catch(()=>{const el=document.createElement("textarea");el.value=t;document.body.appendChild(el);el.select();document.execCommand("copy");document.body.removeChild(el);showToast("URL copied!");
 });}
+function autoGrow(el){if(!el)return;el.style.height="auto";el.style.height=(el.scrollHeight+2)+"px";}
 function showToast(m,variant){const t=document.getElementById("toast");t.textContent=m;t.classList.toggle("ai",!!variant);t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2200);}
 function renderZoneEditor(){
   const el=document.getElementById("zones-editor-wrap");
@@ -1239,11 +1249,19 @@ function renderSubmissions(){
   const deletedIds=getDeletedIds();
   if(deletedIds.size){SUBMISSIONS=SUBMISSIONS.filter(s=>!deletedIds.has(s.id));}
   const el=document.getElementById("submissions-list");
-  el.innerHTML='<div style="color:var(--mut);font-size:14px;padding:12px 0">Loading submissions...</div>';
+  el.innerHTML='<div style="display:flex;align-items:center;gap:10px;color:var(--mut);font-size:14px;padding:16px 0"><span class="spin-dark"></span><span id="subs-loading-msg">Loading submissions...</span></div>';
+  // Google's own service can take longer to respond on a cold start — this
+  // isn't a hang, just Google spinning back up. Reassure rather than leave
+  // the person staring at unchanging text.
+  const _loadingTimeout=setTimeout(()=>{
+    const msgEl=document.getElementById("subs-loading-msg");
+    if(msgEl)msgEl.textContent="Still loading — Google can take a few extra seconds sometimes.";
+  },4000);
   // Fetch from Google Sheet using JSONP to avoid CORS
   const cbName="tkm9cb"+Date.now();
   window[cbName]=function(data){
     try{delete window[cbName];}catch(e){}
+    clearTimeout(_loadingTimeout);
     const s2=document.getElementById("gs-script");
     if(s2)s2.remove();
     if(data&&data.status==="success"&&data.submissions){
@@ -1279,8 +1297,8 @@ function renderSubmissions(){
   const sc=document.createElement("script");
   sc.id="gs-script";
   sc.src=APPS_SCRIPT_URL+"?type=getSubmissions&callback="+cbName+"&t="+Date.now();
-  sc.onerror=function(){renderSubmissionsList();};
-  setTimeout(function(){if(window[cbName]){delete window[cbName];renderSubmissionsList();}},8000);
+  sc.onerror=function(){clearTimeout(_loadingTimeout);renderSubmissionsList();};
+  setTimeout(function(){if(window[cbName]){delete window[cbName];clearTimeout(_loadingTimeout);renderSubmissionsList();}},8000);
   document.head.appendChild(sc);
 }
 let _subsShowing=10;
@@ -1907,6 +1925,8 @@ const win=window.open("","_blank");
   </div>
   <div style="height:4px;background:linear-gradient(90deg,#1a1aff,#7744cc)"></div>
 
+  ${s.clientAddress?`<img src="https://staticmap.openstreetmap.de/staticmap.php?center=${encodeURIComponent(s.clientAddress)}&zoom=15&size=900x150&maptype=mapnik&markers=${encodeURIComponent(s.clientAddress)},red-pushpin" style="width:100%;height:150px;object-fit:cover;display:block" onerror="this.style.display='none'">`:""}
+
   <div style="padding:30px 36px">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;padding-bottom:16px;border-bottom:2px solid #f0f0f8">
       <div>
@@ -1915,8 +1935,6 @@ const win=window.open("","_blank");
       </div>
       <div style="text-align:right">${tags}</div>
     </div>
-
-    ${clientResolved&&clientResolved.address?`<div style="margin-bottom:20px;border-radius:10px;overflow:hidden;border:1px solid #e0e0f0"><img src="https://staticmap.openstreetmap.de/staticmap.php?center=${encodeURIComponent(clientResolved.address)}&zoom=15&size=760x160&maptype=mapnik&markers=${encodeURIComponent(clientResolved.address)},red-pushpin" style="width:100%;height:160px;object-fit:cover;display:block" onerror="this.parentElement.style.display='none'"></div>`:""}
 
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:24px">
       <div style="background:#f8f8ff;border-radius:10px;padding:14px 16px;border:1px solid #e8e8ff">
