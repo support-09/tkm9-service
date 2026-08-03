@@ -109,7 +109,8 @@ textarea{resize:vertical;min-height:78px}
 .bs{background:var(--sur);color:var(--txt);border:1.5px solid var(--bor);flex:0 0 auto;padding:15px 18px;box-shadow:var(--shd)}
 .abox{background:var(--al);border:1px solid #f0b030;border-radius:var(--rsm);padding:11px 13px;font-size:13px;color:var(--amb);margin-bottom:13px}
 .sbox{background:var(--bl);border-left:3px solid var(--blue);border-radius:0 var(--rsm) var(--rsm) 0;padding:10px 12px;margin-bottom:14px;font-size:12px;color:var(--blue);font-weight:500}
-.mdb{width:100%;margin-top:14px;padding:13px;background:var(--grn);color:#fff;border:none;border-radius:var(--rsm);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer}
+.mdb{width:100%;margin-top:14px;padding:13px;background:var(--blue);color:#fff;border:none;border-radius:var(--rsm);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:background .15s}
+.mdb.done{background:var(--grn)}
 .ai-btn{background:none;border:none;color:#e6197a;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;padding:0;display:inline-flex;align-items:center;gap:4px}
 .ai-btn:disabled{opacity:.5;cursor:default}
 .ai-btn-pill{background:#fff0f7;border:1.5px solid #ffc2e0;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:700;color:#e6197a;cursor:pointer;font-family:'DM Sans',sans-serif;display:inline-flex;align-items:center;gap:5px}
@@ -532,7 +533,7 @@ function mkZBody(z){
   if(z.hasLight&&z.lightItems&&z.lightItems.length){h+=`<div class="sh">Lighting</div><div class="sbox">Items to check: <strong>${z.lightItems.join(", ")}</strong></div>`;h+=yn(z.id,"lightOk","Lighting working on ALL items?");}
   if(z.hasOther&&z.otherItems&&z.otherItems.length){h+=`<div class="sh">Other</div><div class="sbox">Items to check: <strong>${z.otherItems.join(", ")}</strong></div>`;h+=yn(z.id,"otherOk","All other items checked and OK?");}
   h+=`<div class="sh">Zone Summary</div><div class="field"><label>Summary / Items to Flag${S.assisted?` <button id="ai-sum-btn-${z.id}" onclick="aiZoneSummary('${z.id}')" class="ai-btn" style="float:right">&#129668; Generate summary</button>`:"" }</label><textarea id="zn-${z.id}" style="min-height:150px" oninput="sf('${z.id}','zoneNote',this.value);autoGrow(this)"></textarea></div>`;h+='<div class="sh">Photos &amp; Video — After Service</div>';h+=`<div class="pa-btns"><div class="pa-btn"><input type="file" id="pia-cam-${z.id}" accept="image/*" capture="environment">&#128247; Take Photo</div><div class="pa-btn"><input type="file" id="pia-vid-${z.id}" accept="video/*" capture="environment">&#127909; Record Video</div><div class="pa-btn"><input type="file" id="pia-lib-${z.id}" accept="image/*,video/*" multiple>&#128248; From Library</div></div>`;h+=`<div class="pg" id="pga-${z.id}"></div>`;
-  h+=`<button class="mdb" onclick="markDone('${z.id}')">Mark Zone Complete &#10003;</button>`;
+  h+=`<button class="mdb${z.completed?" done":""}" id="mdb-${z.id}" onclick="markDone('${z.id}')">${z.completed?"Zone Complete &#10003;":"Mark Zone Complete &#10003;"}</button>`;
   return h;
 }
 
@@ -550,7 +551,7 @@ function yn(zid,field,q){
 function setYN(zid,field,val){S.zoneData[zid]=S.zoneData[zid]||{};S.zoneData[zid][field]=val;document.getElementById(`yn-${zid}-${field}-y`).classList.toggle("on",val==="Yes");document.getElementById(`yn-${zid}-${field}-n`).classList.toggle("on",val==="No");}
 function setCond(zid,val){S.zoneData[zid]=S.zoneData[zid]||{};S.zoneData[zid].condition=val;document.querySelectorAll(`#cond-${zid} .cb`).forEach(b=>b.classList.toggle("on",b.dataset.val===val));}
 function sf(zid,key,val){S.zoneData[zid]=S.zoneData[zid]||{};S.zoneData[zid][key]=val;}
-function markDone(zid){S.zoneData[zid].completed=true;const badge=document.getElementById("zbadge-"+zid),num=document.getElementById("znum-"+zid);if(badge){badge.textContent="Done";badge.className="zbadge done";}if(num)num.className="znum dn";document.getElementById("zh-"+zid).classList.remove("open");document.getElementById("zb-"+zid).classList.remove("open");}
+function markDone(zid){S.zoneData[zid].completed=true;const badge=document.getElementById("zbadge-"+zid),num=document.getElementById("znum-"+zid),btn=document.getElementById("mdb-"+zid);if(badge){badge.textContent="Done";badge.className="zbadge done";}if(num)num.className="znum dn";if(btn){btn.classList.add("done");btn.innerHTML="Zone Complete &#10003;";}document.getElementById("zh-"+zid).classList.remove("open");document.getElementById("zb-"+zid).classList.remove("open");}
 function toggleZ(zid){const h=document.getElementById("zh-"+zid),b=document.getElementById("zb-"+zid),was=b.classList.contains("open");document.querySelectorAll(".zb").forEach(x=>x.classList.remove("open"));document.querySelectorAll(".zh").forEach(x=>x.classList.remove("open"));if(!was){b.classList.add("open");h.classList.add("open");}}
 
 
