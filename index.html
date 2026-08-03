@@ -604,7 +604,7 @@ Focus on what was found and any items requiring follow-up. Be specific and profe
     const el=document.getElementById("zn-"+zid);
     if(el){el.value=text.trim();sf(zid,"zoneNote",text.trim());}
     showToast("Summary generated — edit as needed");
-  }catch(e){showToast("AI unavailable — please write manually");}
+  }catch(e){console.error("AI summary error:",e.message);showToast("AI unavailable — please write manually");}
   if(btn){btn.disabled=false;btn.textContent="✦ Generate summary";}
 }
 
@@ -620,7 +620,7 @@ Notes: ${el.value.trim()}`;
     const text=await callAI(prompt,150);
     el.value=text.trim();sf(zid,field,text.trim());
     showToast("Notes cleaned up");
-  }catch(e){showToast("AI unavailable — please write manually");}
+  }catch(e){console.error("AI clean up error:",e.message);showToast("AI unavailable — please write manually");}
   if(btn){btn.disabled=false;btn.textContent="✦ Clean up";}
 }
 // ── END AI ASSIST ──────────────────────────────────────
