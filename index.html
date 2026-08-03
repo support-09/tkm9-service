@@ -109,6 +109,10 @@ textarea{resize:vertical;min-height:78px}
 .abox{background:var(--al);border:1px solid #f0b030;border-radius:var(--rsm);padding:11px 13px;font-size:13px;color:var(--amb);margin-bottom:13px}
 .sbox{background:var(--bl);border-left:3px solid var(--blue);border-radius:0 var(--rsm) var(--rsm) 0;padding:10px 12px;margin-bottom:14px;font-size:12px;color:var(--blue);font-weight:500}
 .mdb{width:100%;margin-top:14px;padding:13px;background:var(--grn);color:#fff;border:none;border-radius:var(--rsm);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer}
+.ai-btn{background:none;border:none;color:#e6197a;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;padding:0;display:inline-flex;align-items:center;gap:4px}
+.ai-btn:disabled{opacity:.5;cursor:default}
+.ai-btn-pill{background:#fff0f7;border:1.5px solid #ffc2e0;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:700;color:#e6197a;cursor:pointer;font-family:'DM Sans',sans-serif;display:inline-flex;align-items:center;gap:5px}
+.ai-btn-pill:disabled{opacity:.5;cursor:default}
 .spin{display:inline-block;width:17px;height:17px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:7px}
 @keyframes spin{to{transform:rotate(360deg)}}
 .toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:#0e0e22;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
@@ -215,7 +219,7 @@ textarea{resize:vertical;min-height:78px}
     <div style="margin:8px 0 0;text-align:center;font-size:11px;color:var(--mut);font-weight:600;letter-spacing:.05em">+ OPTIONALLY ADD</div>
     <div style="margin-top:8px"><button class="stb callout" data-val="CALLOUT" style="width:100%">&#9889; Callout / Ad-hoc</button></div>
     <div class="cex" id="callout-extra">
-      <div class="field" style="margin-top:12px"><label>Callout Reason</label><input type="text" id="callout-reason" placeholder="e.g. Screen unresponsive, unit offline&hellip;"></div>
+      <div class="field" style="margin-top:12px"><label>Callout Reason <button id="ai-clean-btn-callout" onclick="aiCleanField('callout-reason','ai-clean-btn-callout')" class="ai-btn" style="float:right;display:none">&#129668; Clean up</button></label><input type="text" id="callout-reason" placeholder="e.g. Screen unresponsive, unit offline&hellip;"></div>
       <div class="field"><label>Reported By</label><input type="text" id="callout-reporter" placeholder="e.g. Client / TKM9 Service Desk"></div>
     </div>
   </div>
@@ -236,7 +240,7 @@ textarea{resize:vertical;min-height:78px}
   <div class="card"><div class="ct">Summary</div><div id="review-content"></div></div>
   <div class="card">
     <div class="ct">Overall Notes &amp; Sign-off</div>
-    <div class="field"><label>Additional Notes (optional)</label><textarea id="overall-notes" placeholder="Further observations, follow-up items, notes for TKM9 Service Desk&hellip;"></textarea></div>
+    <div class="field"><label>Additional Notes (optional) <button id="ai-clean-btn-overall" onclick="aiCleanField('overall-notes','ai-clean-btn-overall')" class="ai-btn" style="float:right;display:none">&#129668; Clean up</button></label><textarea id="overall-notes" placeholder="Further observations, follow-up items, notes for TKM9 Service Desk&hellip;"></textarea></div>
     <div class="yw">
       <div class="yq">Is follow-up work required?</div>
       <div class="yr"><button class="yb yes" data-field="followup" data-val="Yes">Yes</button><button class="yb no" data-field="followup" data-val="No">No</button></div>
@@ -448,6 +452,7 @@ document.addEventListener("DOMContentLoaded",()=>{
     return;
   }
   S.slug=slug;S.client=CLIENTS[slug];S.assisted=p.has("assisted")||adminLoggedIn;
+  syncAssistedButtons();
   document.getElementById("screen-1").classList.add("active");
   document.getElementById("bottom-nav").style.display="";
   document.getElementById("prog-bar").style.display="";
@@ -507,9 +512,9 @@ function mkZBody(z){
   }
   if(z.scope&&z.scope.length){h+='<div class="sh">Scope of Work</div><ul class="scope-list">';z.scope.forEach(s=>{h+=`<li><div class="sbullet"></div><span>${s}</span></li>`;});h+="</ul>";}
   h+='<div class="coa-banner">&#9679; Condition on Arrival</div>';
-  if(S.assisted){h+=`<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button onclick="fillFromLastVisit('${z.id}')" style="background:#f0f4ff;border:1.5px solid #c8d4ff;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:700;color:#1a1aff;cursor:pointer;font-family:'DM Sans',sans-serif">&#9654; Fill from last visit</button></div>`;}
+  if(S.assisted){h+=`<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button onclick="fillFromLastVisit('${z.id}')" class="ai-btn-pill">&#129668; Fill from last visit</button></div>`;}
   h+=`<label>Overall Condition</label><div class="cr" id="cond-${z.id}"><button class="cb" data-val="Good" onclick="setCond('${z.id}','Good')">Good</button><button class="cb" data-val="Medium" onclick="setCond('${z.id}','Medium')">Medium</button><button class="cb" data-val="Poor" onclick="setCond('${z.id}','Poor')">Poor</button></div>`;
-  h+=`<div class="field"><label>Condition Comments (optional)${S.assisted?` <button id="ai-clean-btn-${z.id}-condNote" onclick="aiCleanNote('${z.id}','condNote','cn-${z.id}')" style="float:right;background:none;border:none;color:#1a1aff;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;padding:0">&#10022; Clean up</button>`:"" }</label><textarea id="cn-${z.id}" oninput="sf('${z.id}','condNote',this.value)"></textarea></div>`;
+  h+=`<div class="field"><label>Condition Comments (optional)${S.assisted?` <button id="ai-clean-btn-${z.id}-condNote" onclick="aiCleanNote('${z.id}','condNote','cn-${z.id}')" class="ai-btn" style="float:right">&#129668; Clean up</button>`:"" }</label><textarea id="cn-${z.id}" oninput="sf('${z.id}','condNote',this.value)"></textarea></div>`;
   h+='<div class="sh">Photos &amp; Video — Before Service</div>';
   h+=`<div class="pa-btns"><div class="pa-btn"><input type="file" id="pi-cam-${z.id}" accept="image/*" capture="environment">&#128247; Take Photo</div><div class="pa-btn"><input type="file" id="pi-vid-${z.id}" accept="video/*" capture="environment">&#127909; Record Video</div><div class="pa-btn"><input type="file" id="pi-lib-${z.id}" accept="image/*,video/*" multiple>&#128248; From Library</div></div>`;
   h+=`<div class="upload-prog" id="uprog-${z.id}"><div class="upload-prog-fill" id="uprog-fill-${z.id}" style="width:0%"></div></div>`;
@@ -523,7 +528,7 @@ function mkZBody(z){
   if(z.hasSound&&z.soundItems&&z.soundItems.length){h+=`<div class="sh">Sound</div><div class="sbox">Items to check: <strong>${z.soundItems.join(", ")}</strong></div>`;h+=yn(z.id,"soundOk","Sound working on ALL items?");h+=yn(z.id,"volumeOk","Volume level adequate?");}
   if(z.hasLight&&z.lightItems&&z.lightItems.length){h+=`<div class="sh">Lighting</div><div class="sbox">Items to check: <strong>${z.lightItems.join(", ")}</strong></div>`;h+=yn(z.id,"lightOk","Lighting working on ALL items?");}
   if(z.hasOther&&z.otherItems&&z.otherItems.length){h+=`<div class="sh">Other</div><div class="sbox">Items to check: <strong>${z.otherItems.join(", ")}</strong></div>`;h+=yn(z.id,"otherOk","All other items checked and OK?");}
-  h+=`<div class="sh">Zone Summary</div><div class="field"><label>Summary / Items to Flag${S.assisted?` <button id="ai-sum-btn-${z.id}" onclick="aiZoneSummary('${z.id}')" style="float:right;background:none;border:none;color:#1a1aff;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;padding:0">&#10022; Generate summary</button>`:"" }</label><textarea id="zn-${z.id}" oninput="sf('${z.id}','zoneNote',this.value)"></textarea></div>`;h+='<div class="sh">Photos &amp; Video — After Service</div>';h+=`<div class="pa-btns"><div class="pa-btn"><input type="file" id="pia-cam-${z.id}" accept="image/*" capture="environment">&#128247; Take Photo</div><div class="pa-btn"><input type="file" id="pia-vid-${z.id}" accept="video/*" capture="environment">&#127909; Record Video</div><div class="pa-btn"><input type="file" id="pia-lib-${z.id}" accept="image/*,video/*" multiple>&#128248; From Library</div></div>`;h+=`<div class="pg" id="pga-${z.id}"></div>`;
+  h+=`<div class="sh">Zone Summary</div><div class="field"><label>Summary / Items to Flag${S.assisted?` <button id="ai-sum-btn-${z.id}" onclick="aiZoneSummary('${z.id}')" class="ai-btn" style="float:right">&#129668; Generate summary</button>`:"" }</label><textarea id="zn-${z.id}" oninput="sf('${z.id}','zoneNote',this.value)"></textarea></div>`;h+='<div class="sh">Photos &amp; Video — After Service</div>';h+=`<div class="pa-btns"><div class="pa-btn"><input type="file" id="pia-cam-${z.id}" accept="image/*" capture="environment">&#128247; Take Photo</div><div class="pa-btn"><input type="file" id="pia-vid-${z.id}" accept="video/*" capture="environment">&#127909; Record Video</div><div class="pa-btn"><input type="file" id="pia-lib-${z.id}" accept="image/*,video/*" multiple>&#128248; From Library</div></div>`;h+=`<div class="pg" id="pga-${z.id}"></div>`;
   h+=`<button class="mdb" onclick="markDone('${z.id}')">Mark Zone Complete &#10003;</button>`;
   return h;
 }
@@ -605,7 +610,7 @@ Focus on what was found and any items requiring follow-up. Be specific and profe
     if(el){el.value=text.trim();sf(zid,"zoneNote",text.trim());}
     showToast("Summary generated — edit as needed");
   }catch(e){console.error("AI summary error:",e.message);showToast("AI unavailable — please write manually");}
-  if(btn){btn.disabled=false;btn.textContent="✦ Generate summary";}
+  if(btn){btn.disabled=false;btn.innerHTML="&#129668; Generate summary";}
 }
 
 async function aiCleanNote(zid,field,textareaId){
@@ -621,7 +626,34 @@ Notes: ${el.value.trim()}`;
     el.value=text.trim();sf(zid,field,text.trim());
     showToast("Notes cleaned up");
   }catch(e){console.error("AI clean up error:",e.message);showToast("AI unavailable — please write manually");}
-  if(btn){btn.disabled=false;btn.textContent="✦ Clean up";}
+  if(btn){btn.disabled=false;btn.innerHTML="&#129668; Clean up";}
+}
+// Shows/hides the AI buttons on fields that live in static HTML (Callout
+// Reason, Additional Notes) rather than being built by JS per zone — those
+// only know whether to appear once S.assisted is known.
+function syncAssistedButtons(){
+  ["ai-clean-btn-callout","ai-clean-btn-overall"].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el)el.style.display=S.assisted?"inline-flex":"none";
+  });
+}
+// Generic "Clean up" for plain fields not tied to a zone (Callout Reason,
+// Additional Notes) — reads and writes the field directly instead of going
+// through the zone-data save function.
+async function aiCleanField(inputId,btnId){
+  const el=document.getElementById(inputId);
+  if(!el||!el.value.trim()){showToast("Add some text first");return;}
+  const btn=document.getElementById(btnId);
+  if(btn){btn.disabled=true;btn.textContent="Cleaning...";}
+  const prompt=`Rewrite this into clean, professional language for a client-facing service report. Keep the same meaning. Be concise. Return only the rewritten text, nothing else.
+
+Text: ${el.value.trim()}`;
+  try{
+    const text=await callAI(prompt,150);
+    el.value=text.trim();
+    showToast("Cleaned up");
+  }catch(e){console.error("AI clean up error:",e.message);showToast("AI unavailable — please write manually");}
+  if(btn){btn.disabled=false;btn.innerHTML="&#129668; Clean up";}
 }
 // ── END AI ASSIST ──────────────────────────────────────
 async function handlePhotos(e,zid){
@@ -818,6 +850,7 @@ function hardReset(){
   const wasAssisted=S.assisted;
   initS();S.slug=(new URLSearchParams(window.location.search).get("client")||"").toLowerCase().trim();S.client=CLIENTS[S.slug];
   S.assisted=wasAssisted||new URLSearchParams(window.location.search).has("assisted")||adminLoggedIn;
+  syncAssistedButtons();
   ["tech-name","tech-mobile","callout-reason","callout-reporter","overall-notes"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
   document.getElementById("service-date").value=new Date().toISOString().split("T")[0];
   document.getElementById("callout-extra").classList.remove("show");
