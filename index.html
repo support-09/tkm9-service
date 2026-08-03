@@ -1052,8 +1052,33 @@ function safeLocalSave(){
   // Last resort: save without any photos
   try{localStorage.setItem("tkm9_submissions",JSON.stringify(SUBMISSIONS.map(s2=>Object.assign({},s2,{photos:{},afterPhotos:{}}))));}catch(e){}
 }
+// Deletes only ever happened locally — the report stayed in the Google Sheet,
+// so the next sync from the Sheet would silently bring it back. These two
+// helpers keep a small "already deleted" list so a sync never re-adds a
+// report the user just removed, and we also ask Apps Script to remove the
+// row from the Sheet itself so it's gone for good (and for every device).
+function getDeletedIds(){
+  try{return new Set(JSON.parse(localStorage.getItem("tkm9_deleted_ids")||"[]"));}catch(e){return new Set();}
+}
+function saveDeletedIds(set){
+  try{localStorage.setItem("tkm9_deleted_ids",JSON.stringify(Array.from(set)));}catch(e){}
+}
+function addDeletedIds(ids){
+  const set=getDeletedIds();
+  (ids||[]).forEach(id=>{if(id)set.add(id);});
+  saveDeletedIds(set);
+}
+function deleteFromSheet(ids,deleteAll){
+  if(!APPS_SCRIPT_URL)return;
+  try{
+    const payload={type:"deleteSubmissions",ids:ids||[],deleteAll:!!deleteAll};
+    fetch(APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)}).catch(()=>{});
+  }catch(e){}
+}
 function renderSubmissions(){
   try{SUBMISSIONS=JSON.parse(localStorage.getItem("tkm9_submissions")||"[]");}catch(e){}
+  const deletedIds=getDeletedIds();
+  if(deletedIds.size){SUBMISSIONS=SUBMISSIONS.filter(s=>!deletedIds.has(s.id));}
   const el=document.getElementById("submissions-list");
   el.innerHTML='<div style="color:var(--mut);font-size:14px;padding:12px 0">Loading submissions...</div>';
   // Fetch from Google Sheet using JSONP to avoid CORS
@@ -1062,10 +1087,18 @@ function renderSubmissions(){
     try{delete window[cbName];}catch(e){}
     const s2=document.getElementById("gs-script");
     if(s2)s2.remove();
-    if(data&&data.status==="success"&&data.submissions&&data.submissions.length){
+    if(data&&data.status==="success"&&data.submissions){
+      // Self-clean the tombstone list: once a report no longer comes back
+      // from the Sheet, the delete has taken effect there and we don't
+      // need to keep remembering it.
+      const sheetIds=new Set(data.submissions.map(s=>s.id));
+      let dirty=false;
+      deletedIds.forEach(id=>{if(!sheetIds.has(id)){deletedIds.delete(id);dirty=true;}});
+      if(dirty)saveDeletedIds(deletedIds);
       const localMap={};
       SUBMISSIONS.forEach(s=>{if(s.id)localMap[s.id]=s;});
       data.submissions.forEach(s=>{
+        if(deletedIds.has(s.id))return; // was deleted locally — don't let the Sheet bring it back
         if(localMap[s.id]){
           // Submission exists locally — local is always truth. Never overwrite.
           // Only fill zoneData if local has none and Sheet has it
@@ -1151,6 +1184,8 @@ function bulkDeleteSubs(){
   const idsToDelete=new Set(checked.map(c=>c.dataset.id).filter(Boolean));
   const idxToDelete=new Set(checked.map(c=>parseInt(c.dataset.idx)).filter(n=>!isNaN(n)));
   SUBMISSIONS=SUBMISSIONS.filter((s,i)=>!idsToDelete.has(s.id)&&!idxToDelete.has(i));
+  addDeletedIds(Array.from(idsToDelete));
+  deleteFromSheet(Array.from(idsToDelete));
   safeLocalSave();
   _filteredSubs=null;
   document.getElementById("select-all-subs").checked=false;
@@ -1169,6 +1204,8 @@ function bulkDownloadSubs(){
 function deleteAllSubmissions(){
   if(!confirm("Delete ALL "+SUBMISSIONS.length+" submissions? This cannot be undone."))return;
   if(!confirm("Are you sure? This will permanently delete everything in your local storage."))return;
+  addDeletedIds(SUBMISSIONS.map(s=>s.id));
+  deleteFromSheet([],true);
   SUBMISSIONS=[];
   safeLocalSave();
   _filteredSubs=null;
@@ -1445,6 +1482,8 @@ function deleteSubmission(){
   const s=SUBMISSIONS[currentSubIdx];
   if(!confirm("Delete report for "+s.clientName+" ("+s.techName+" - "+s.serviceDate+")? This cannot be undone."))return;
   SUBMISSIONS.splice(currentSubIdx,1);
+  addDeletedIds([s.id]);
+  deleteFromSheet([s.id]);
   safeLocalSave();
   currentSubIdx=null;
   showSubsList();
