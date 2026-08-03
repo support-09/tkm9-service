@@ -105,6 +105,7 @@ textarea{resize:vertical;min-height:78px}
 .btn{flex:1;padding:15px;border-radius:var(--rad);border:none;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:all .15s;text-align:center}
 .bp{background:var(--blue);color:#fff;box-shadow:0 3px 12px rgba(26,26,255,.3)}
 .bg2{background:var(--grn);color:#fff;box-shadow:0 3px 12px rgba(0,165,80,.3)}
+.bwarn{background:var(--red);color:#fff;box-shadow:0 3px 12px rgba(204,34,51,.35)}
 .bs{background:var(--sur);color:var(--txt);border:1.5px solid var(--bor);flex:0 0 auto;padding:15px 18px;box-shadow:var(--shd)}
 .abox{background:var(--al);border:1px solid #f0b030;border-radius:var(--rsm);padding:11px 13px;font-size:13px;color:var(--amb);margin-bottom:13px}
 .sbox{background:var(--bl);border-left:3px solid var(--blue);border-radius:0 var(--rsm) var(--rsm) 0;padding:10px 12px;margin-bottom:14px;font-size:12px;color:var(--blue);font-weight:500}
@@ -587,10 +588,30 @@ async function callAI(prompt,maxTokens){
   throw new Error(data.message||"AI unavailable");
 }
 
+// Puts a button into a temporary "Undo" state after an AI action. If the
+// person starts editing the field again, the button snaps back to its
+// normal label immediately (rather than staying stuck showing Undo) so
+// Clean up / Generate summary is never a one-time-only action — editing a
+// couple more words and running it again always works.
+function aiArmUndo(btn,el,previousValue,normalLabel,revertFn){
+  const originalOnclick=btn.onclick;
+  btn.disabled=false;
+  btn.innerHTML="&#8617; Undo";
+  const restoreNormal=()=>{
+    if(btn.innerHTML.indexOf("Undo")!==-1){btn.innerHTML=normalLabel;btn.onclick=originalOnclick;}
+  };
+  btn.onclick=()=>{
+    revertFn(previousValue);
+    showToast("Reverted to your original text","ai");
+    btn.innerHTML=normalLabel;
+    btn.onclick=originalOnclick;
+  };
+  if(el)el.addEventListener("input",restoreNormal,{once:true});
+  setTimeout(restoreNormal,8000);
+}
 async function aiZoneSummary(zid){
   const btn=document.getElementById("ai-sum-btn-"+zid);
   const el=document.getElementById("zn-"+zid);
-  const originalOnclick=btn?btn.onclick:null;
   const previousValue=el?el.value:"";
   if(btn){btn.disabled=true;btn.textContent="Generating...";}
   const z=S.zoneData[zid]||{};
@@ -613,15 +634,7 @@ Focus on what was found and any items requiring follow-up. Be specific and profe
     if(el){el.value=text.trim();sf(zid,"zoneNote",text.trim());}
     showToast("Summary generated — edit as needed","ai");
     if(btn&&el){
-      btn.disabled=false;
-      btn.innerHTML="&#8617; Undo";
-      btn.onclick=()=>{
-        el.value=previousValue;sf(zid,"zoneNote",previousValue);
-        showToast("Reverted to your original text","ai");
-        btn.innerHTML="&#129668; Generate summary";
-        btn.onclick=originalOnclick;
-      };
-      setTimeout(()=>{if(btn.innerHTML.indexOf("Undo")!==-1){btn.innerHTML="&#129668; Generate summary";btn.onclick=originalOnclick;}},8000);
+      aiArmUndo(btn,el,previousValue,"&#129668; Generate summary",(prev)=>{el.value=prev;sf(zid,"zoneNote",prev);});
       return;
     }
   }catch(e){console.error("AI summary error:",e.message);showToast("AI unavailable — please write manually","ai");}
@@ -634,7 +647,6 @@ async function aiCleanNote(zid,field,textareaId){
   const words=el.value.trim().split(/\s+/).filter(Boolean);
   if(words.length<2){showToast("Add a bit more detail — needs more than a single word","ai");return;}
   const btn=document.getElementById("ai-clean-btn-"+zid+"-"+field);
-  const originalOnclick=btn?btn.onclick:null;
   const previousValue=el.value;
   if(btn){btn.disabled=true;btn.textContent="Cleaning...";}
   const prompt=`Rewrite these rough service notes into clean, professional language for a client-facing report. Keep the same meaning. Be concise. Return only the rewritten text, nothing else.
@@ -645,15 +657,7 @@ Notes: ${el.value.trim()}`;
     el.value=text.trim();sf(zid,field,text.trim());
     showToast("Notes cleaned up","ai");
     if(btn){
-      btn.disabled=false;
-      btn.innerHTML="&#8617; Undo";
-      btn.onclick=()=>{
-        el.value=previousValue;sf(zid,field,previousValue);
-        showToast("Reverted to your original text","ai");
-        btn.innerHTML="&#129668; Clean up";
-        btn.onclick=originalOnclick;
-      };
-      setTimeout(()=>{if(btn.innerHTML.indexOf("Undo")!==-1){btn.innerHTML="&#129668; Clean up";btn.onclick=originalOnclick;}},8000);
+      aiArmUndo(btn,el,previousValue,"&#129668; Clean up",(prev)=>{el.value=prev;sf(zid,field,prev);});
       return;
     }
   }catch(e){console.error("AI clean up error:",e.message);showToast("AI unavailable — please write manually","ai");}
@@ -677,7 +681,6 @@ async function aiCleanField(inputId,btnId){
   const words=el.value.trim().split(/\s+/).filter(Boolean);
   if(words.length<2){showToast("Add a bit more detail — needs more than a single word","ai");return;}
   const btn=document.getElementById(btnId);
-  const originalOnclick=btn?btn.onclick:null;
   const previousValue=el.value;
   if(btn){btn.disabled=true;btn.textContent="Cleaning...";}
   const prompt=`Rewrite this into clean, professional language for a client-facing service report. Keep the same meaning. Be concise. Return only the rewritten text, nothing else.
@@ -688,15 +691,7 @@ Text: ${el.value.trim()}`;
     el.value=text.trim();
     showToast("Cleaned up","ai");
     if(btn){
-      btn.disabled=false;
-      btn.innerHTML="&#8617; Undo";
-      btn.onclick=()=>{
-        el.value=previousValue;
-        showToast("Reverted to your original text","ai");
-        btn.innerHTML="&#129668; Clean up";
-        btn.onclick=originalOnclick;
-      };
-      setTimeout(()=>{if(btn.innerHTML.indexOf("Undo")!==-1){btn.innerHTML="&#129668; Clean up";btn.onclick=originalOnclick;}},8000);
+      aiArmUndo(btn,el,previousValue,"&#129668; Clean up",(prev)=>{el.value=prev;});
       return;
     }
   }catch(e){console.error("AI clean up error:",e.message);showToast("AI unavailable — please write manually","ai");}
@@ -863,6 +858,7 @@ async function submitReport(){
   const btn=document.getElementById("btn-next");btn.disabled=true;
   // Wait for any in-progress Drive uploads to finish (max 90 seconds)
   if(_pendingUploads>0){
+    btn.className="btn bwarn";
     btn.innerHTML='<span class="spin"></span>Uploading photos &amp; videos — please wait...';
     const start=Date.now();
     while(_pendingUploads>0&&Date.now()-start<90000){
@@ -872,6 +868,7 @@ async function submitReport(){
       btn.innerHTML=`<span class="spin"></span>&#9888; Uploading ${done} of ${total} — don't close or navigate away`;
     }
   }
+  btn.className="btn bg2";
   btn.innerHTML='<span class="spin"></span>Submitting...';
   // Build sub AFTER upload wait so driveUrls are captured
   const sub={id:"sub_"+Date.now(),timestamp:new Date().toISOString(),clientSlug:S.slug,clientName:S.client.name,clientAddress:S.client.address,techName:S.techName,techMobile:S.techMobile,serviceDate:S.serviceDate,serviceType:S.serviceType,serviceTypes:S.serviceTypes,calloutReason:S.calloutReason,calloutReporter:S.calloutReporter,overallNotes:document.getElementById("overall-notes").value,followup:S.followup,zoneData:JSON.parse(JSON.stringify(S.zoneData)),photos:JSON.parse(JSON.stringify(S.photos)),afterPhotos:JSON.parse(JSON.stringify(S.afterPhotos||{})),photoCount:Object.values(S.photos).flat().length+Object.values(S.afterPhotos||{}).flat().length,driveFolderUrl:S.driveFolderUrl||""};
@@ -1743,10 +1740,12 @@ function downloadSubPDF(){
             const driveUrl=typeof p==="object"?(p.driveUrl||""):"";
             if(src){
               // onerror: if Drive embed fails, replace with a link tile
-              const fallback=driveUrl?`this.outerHTML='<a href=&quot;${driveUrl}&quot; target=&quot;_blank&quot; style=&quot;display:flex;flex-direction:column;align-items:center;justify-content:center;height:130px;background:#f0f4ff;border-radius:8px;border:1px solid #c8d4ff;text-decoration:none;color:#1a1aff;font-size:11px;font-weight:600;text-align:center;padding:8px&quot;>&#128247;<br>View Photo</a>'`:`this.style.display='none'`;
+              const fallback=driveUrl?`this.outerHTML='<a href=&quot;${driveUrl}&quot; target=&quot;_blank&quot; style=&quot;display:flex;flex-direction:column;align-items:center;justify-content:center;height:130px;background:#f0f4ff;border-radius:8px;border:1px solid #c8d4ff;text-decoration:none;color:#1a1aff;font-size:11px;font-weight:600;text-align:center;padding:8px&quot;>&#128247;<br>View Photo</a>'`:`this.outerHTML='<div style=&quot;display:flex;flex-direction:column;align-items:center;justify-content:center;height:130px;background:#f5f5fa;border:1px dashed #ccc;border-radius:8px;color:#999;font-size:11px;font-weight:600;text-align:center&quot;>&#9888;<br>Unavailable</div>'`;
               h+=`<img src="${src}" style="width:100%;height:130px;object-fit:cover;border-radius:8px;border:1px solid #eee" onerror="${fallback}">`;
             } else if(driveUrl){
               h+=`<a href="${driveUrl}" target="_blank" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:130px;background:#f0f4ff;border-radius:8px;border:1px solid #c8d4ff;text-decoration:none;color:#1a1aff;font-size:11px;font-weight:600;text-align:center;padding:8px">&#128247;<br>View Photo</a>`;
+            } else {
+              h+=`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:130px;background:#f5f5fa;border:1px dashed #ccc;border-radius:8px;color:#999;font-size:11px;font-weight:600;text-align:center">&#9888;<br>Unavailable</div>`;
             }
           });
           h+=`</div>`;
@@ -1760,10 +1759,11 @@ function downloadSubPDF(){
             if(src){
               h+=`<div style="position:relative;width:160px;height:110px;background:#0e0e22;border-radius:8px;overflow:hidden"><video style="width:100%;height:100%;object-fit:cover" src="${src}"></video><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none"><span style="font-size:28px;opacity:.9">▶</span></div></div>`;
             } else if(url||driveId){
-              // Video: show thumbnail preview if available, link to Drive to play
-              const embedUrl=driveId?`https://drive.google.com/file/d/${driveId}/preview`:url;
+              // Video: link to Drive to play
               const openUrl=url||`https://drive.google.com/file/d/${driveId}/view`;
               h+=`<a href="${openUrl}" target="_blank" style="position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;width:160px;height:110px;background:#0e0e22;border-radius:8px;color:#fff;font-size:13px;font-weight:700;text-decoration:none;overflow:hidden"><span style="position:relative;font-size:22px">▶</span><span style="position:relative;font-size:11px;margin-top:4px">View Video</span></a>`;
+            } else {
+              h+=`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:160px;height:110px;background:#f5f5fa;border:1px dashed #ccc;border-radius:8px;color:#999;font-size:11px;font-weight:600;text-align:center">&#9888;<br>Unavailable</div>`;
             }
           });
           h+=`</div>`;
