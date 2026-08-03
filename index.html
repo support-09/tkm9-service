@@ -61,8 +61,8 @@ textarea{resize:vertical;min-height:78px}
 .yq{font-size:14px;font-weight:500;margin-bottom:7px;line-height:1.4}
 .yr{display:flex;gap:8px}
 .yb{flex:1;padding:11px;border:1.5px solid var(--bor);border-radius:var(--rsm);background:var(--su2);color:var(--mut);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .15s;text-align:center}
-.yb.yes.on{background:var(--gl);border-color:var(--grn);color:var(--grn)}
-.yb.no.on{background:var(--rl);border-color:var(--red);color:var(--red)}
+.yb.good.on{background:var(--gl);border-color:var(--grn);color:var(--grn)}
+.yb.bad.on{background:var(--rl);border-color:var(--red);color:var(--red)}
 .cr{display:flex;gap:8px;margin-bottom:13px}
 .cb{flex:1;padding:10px 4px;border:1.5px solid var(--bor);border-radius:var(--rsm);background:var(--su2);color:var(--mut);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;text-align:center}
 .cb.on[data-val=Good]{background:var(--gl);border-color:var(--grn);color:var(--grn)}
@@ -244,12 +244,12 @@ textarea{resize:vertical;min-height:78px}
     <div class="ct">Overall Notes &amp; Sign-off</div>
     <div class="yw">
       <div class="yq">Is follow-up work required?</div>
-      <div class="yr"><button class="yb yes" data-field="followup" data-val="Yes">Yes</button><button class="yb no" data-field="followup" data-val="No">No</button></div>
+      <div class="yr"><button class="yb bad" data-field="followup" data-val="Yes">Yes</button><button class="yb good" data-field="followup" data-val="No">No</button></div>
     </div>
     <div class="field"><label>Additional Notes (optional) <button id="ai-clean-btn-overall" onclick="aiCleanField('overall-notes','ai-clean-btn-overall')" class="ai-btn" style="float:right;display:none">&#129668; Clean up</button></label><textarea id="overall-notes" placeholder="Further observations, follow-up items, notes for TKM9 Service Desk&hellip;"></textarea></div>
     <div class="yw" style="margin-bottom:0">
       <div class="yq">I confirm this service has been completed.</div>
-      <div class="yr"><button class="yb yes" data-field="ack" data-val="confirmed" style="flex:none;padding:12px 28px">Confirm &#10003;</button></div>
+      <div class="yr"><button class="yb good" data-field="ack" data-val="confirmed" style="flex:none;padding:12px 28px">Confirm &#10003;</button></div>
     </div>
   </div>
   <div class="abox" id="ack-error" style="display:none">Please confirm acknowledgment before submitting.</div>
@@ -535,7 +535,17 @@ function mkZBody(z){
   return h;
 }
 
-function yn(zid,field,q){return `<div class="yw"><div class="yq">${q}</div><div class="yr"><button class="yb yes" id="yn-${zid}-${field}-y" onclick="setYN('${zid}','${field}','Yes')">Yes</button><button class="yb no" id="yn-${zid}-${field}-n" onclick="setYN('${zid}','${field}','No')">No</button></div></div>`;}
+// Some questions are phrased so "No" is the good answer (e.g. "Any visual
+// cracks or damage?" — No means nothing's wrong). Colouring both buttons
+// as if Yes always meant good was telling technicians the wrong answer
+// was the safe one. Read each question yourself if a field is added later
+// — don't assume from the field name alone.
+const INVERTED_CHECKS=new Set(["cracks","ventBlocked","dirtyCorners","hotItems","dustInternal","deadPixels"]);
+function yn(zid,field,q){
+  const inv=INVERTED_CHECKS.has(field);
+  const yesCls=inv?"bad":"good",noCls=inv?"good":"bad";
+  return `<div class="yw"><div class="yq">${q}</div><div class="yr"><button class="yb ${yesCls}" id="yn-${zid}-${field}-y" onclick="setYN('${zid}','${field}','Yes')">Yes</button><button class="yb ${noCls}" id="yn-${zid}-${field}-n" onclick="setYN('${zid}','${field}','No')">No</button></div></div>`;
+}
 function setYN(zid,field,val){S.zoneData[zid]=S.zoneData[zid]||{};S.zoneData[zid][field]=val;document.getElementById(`yn-${zid}-${field}-y`).classList.toggle("on",val==="Yes");document.getElementById(`yn-${zid}-${field}-n`).classList.toggle("on",val==="No");}
 function setCond(zid,val){S.zoneData[zid]=S.zoneData[zid]||{};S.zoneData[zid].condition=val;document.querySelectorAll(`#cond-${zid} .cb`).forEach(b=>b.classList.toggle("on",b.dataset.val===val));}
 function sf(zid,key,val){S.zoneData[zid]=S.zoneData[zid]||{};S.zoneData[zid][key]=val;}
@@ -607,12 +617,13 @@ async function aiZoneSummaryEdit(zid,zoneName){
   const condition=condEl?condEl.value:"";
   const condNote=condNoteEl?condNoteEl.value:"";
   const checkLabels={touchOk:"Touch working",cameraOk:"Camera secure",cracks:"Visual cracks/damage",fixings:"Fixings secure",ventBlocked:"Ventilation blocked",dirtyCorners:"Screen corners dirty",hotItems:"Electrical items hot",cablesOk:"Cables secure",dustInternal:"Internal dust",soundOk:"Sound working",volumeOk:"Volume adequate",lightOk:"Lighting working"};
+  const checkInverted=new Set(["cracks","ventBlocked","dirtyCorners","hotItems","dustInternal"]);
   const passed=[],failed=[];
   Object.keys(checkLabels).forEach(k=>{
     const selEl=document.getElementById("edit-check-"+zid+"-"+k);
-    if(selEl){
-      if(selEl.value==="Yes")passed.push(checkLabels[k]);
-      if(selEl.value==="No")failed.push(checkLabels[k]);
+    if(selEl&&(selEl.value==="Yes"||selEl.value==="No")){
+      const isGood=checkInverted.has(k)?selEl.value==="No":selEl.value==="Yes";
+      (isGood?passed:failed).push(checkLabels[k]);
     }
   });
   const prompt=`Write a concise 2-3 sentence professional zone service summary for a client-facing report.
@@ -659,8 +670,13 @@ async function aiZoneSummary(zid){
   const z=S.zoneData[zid]||{};
   const zoneName=S.client.zones.find((zn,i)=>(zn.id||"z"+(i+1))===zid)?.name||zid;
   const checkLabels={touchOk:"Touch working",cameraOk:"Camera secure",cracks:"Visual cracks/damage",fixings:"Fixings secure",ventBlocked:"Ventilation blocked",dirtyCorners:"Screen corners dirty",hotItems:"Electrical items hot",cablesOk:"Cables secure",dustInternal:"Internal dust",soundOk:"Sound working",volumeOk:"Volume adequate",lightOk:"Lighting working"};
+  const checkInverted=new Set(["cracks","ventBlocked","dirtyCorners","hotItems","dustInternal"]);
   const passed=[],failed=[];
-  Object.entries(checkLabels).forEach(([k,label])=>{if(z[k]==="Yes")passed.push(label);if(z[k]==="No")failed.push(label);});
+  Object.entries(checkLabels).forEach(([k,label])=>{
+    const v=z[k];if(v!=="Yes"&&v!=="No")return;
+    const isGood=checkInverted.has(k)?v==="No":v==="Yes";
+    (isGood?passed:failed).push(label);
+  });
   const prompt=`Write a concise 2-3 sentence professional zone service summary for a client-facing report.
 
 Zone: ${zoneName}
@@ -1669,9 +1685,11 @@ function downloadSubPDF(idx){
 
   const checkLabels={"touchOk":"Touch Working on All Areas of Game","cameraOk":"Camera Securely in Place","cracks":"Visual Cracks or Damage","fixings":"All Fixings Secure","ventBlocked":"Debris Blocking Ventilation Holes","dirtyCorners":"Build-up or Dirt in Screen Corners","hotItems":"Electrical Items Hot to Touch","cablesOk":"All Cables Securely in Place","dustInternal":"Dust or Debris Build-up Internally","soundOk":"Sound Working on All Items","volumeOk":"Volume Level Adequate","lightOk":"Lighting Working on All Items","projOn":"Projection On and Aligned to Canvas","motionOk":"All Motion Detection Sensors Working","soundCalib":"Sound Working and Calibrated","equipClean":"Equipment Clean and Clear of Dust","deadPixels":"Damaged Pixels on LED Panels","colourOk":"Colour and Calibration Correct","soundCalib2":"Sound Calibration Correct","animalsWorking":"All Animals Working with Screen","animalsPresent":"All Animals Present in Tray","airflow":"Airflow and Heat OK for All Equipment","noClutter":"Room Clear of Clutter","signalOk":"Signal Strength as Intended","otherOk":"All Other Items Checked and OK"};
   const condCol=c=>c==="Good"?"#00a550":c==="Poor"?"#cc2233":"#d97000";
-  const ynBg=v=>v==="Yes"?"#e6f7ef":"#ffebee";
-  const ynCol=v=>v==="Yes"?"#00a550":"#cc2233";
-  const ynIcon=v=>v==="Yes"?"✓":"✗";
+  const YN_INVERTED=new Set(["cracks","ventBlocked","dirtyCorners","hotItems","dustInternal","deadPixels"]);
+  const ynGood=(v,k)=>v==="Yes"||v==="No"?(YN_INVERTED.has(k)?v==="No":v==="Yes"):false;
+  const ynBg=(v,k)=>ynGood(v,k)?"#e6f7ef":"#ffebee";
+  const ynCol=(v,k)=>ynGood(v,k)?"#00a550":"#cc2233";
+  const ynIcon=(v,k)=>ynGood(v,k)?"✓":"✗";
 
   let zonesHtml="";
   // Deep-clone submission so we never mutate the live SUBMISSIONS array
@@ -1767,9 +1785,15 @@ function downloadSubPDF(idx){
         const label=checkLabels[k];if(!label)return;
         const val=z[k]||"";
         const recorded=val==="Yes"||val==="No";
-        const bg=recorded?(val==="Yes"?"#e6f7ef":"#ffebee"):"#f4f4f8";
-        const col=recorded?(val==="Yes"?"#00a550":"#cc2233"):"#aaa";
-        const icon=recorded?(val==="Yes"?"✓":"✗"):"—";
+        // Same polarity list as the live form — for these specific
+        // questions, "No" is the good answer (e.g. no cracks found),
+        // so the good/bad colour has to follow the answer's meaning,
+        // not just whether it literally says "Yes".
+        const inverted=["cracks","ventBlocked","dirtyCorners","hotItems","dustInternal","deadPixels"].includes(k);
+        const isGood=recorded&&(inverted?val==="No":val==="Yes");
+        const bg=recorded?(isGood?"#e6f7ef":"#ffebee"):"#f4f4f8";
+        const col=recorded?(isGood?"#00a550":"#cc2233"):"#aaa";
+        const icon=recorded?(isGood?"✓":"✗"):"—";
         const display=recorded?val:"Not recorded";
         checksSection+=`<tr><td style="padding:7px 10px;border-bottom:1px solid #f4f4f8;font-size:12px;color:#333;width:85%">${label}</td><td style="padding:7px 10px;border-bottom:1px solid #f4f4f8;text-align:right"><span style="background:${bg};color:${col};font-weight:700;font-size:11px;padding:3px 10px;border-radius:20px">${icon} ${display}</span></td></tr>`;
       });
@@ -1920,8 +1944,18 @@ const win=window.open("","_blank");
       const goodZones=s.zoneData?Object.values(s.zoneData).filter(z=>z.condition==="Good").length:0;
       const medZones=s.zoneData?Object.values(s.zoneData).filter(z=>z.condition==="Medium").length:0;
       const poorZones=s.zoneData?Object.values(s.zoneData).filter(z=>z.condition==="Poor").length:0;
-      const totalChecks=s.zoneData?Object.values(s.zoneData).reduce((acc,z)=>{const keys=["touchOk","cameraOk","cracks","fixings","ventBlocked","dirtyCorners","hotItems","cablesOk","dustInternal","soundOk","volumeOk","lightOk","projOn","motionOk","soundCalib","equipClean","airflow","noClutter","signalOk"];return acc+keys.filter(k=>z[k]).length;},0):0;
-      const yesChecks=s.zoneData?Object.values(s.zoneData).reduce((acc,z)=>{const keys=["touchOk","cameraOk","fixings","cablesOk","soundOk","volumeOk","lightOk","projOn","motionOk","soundCalib","equipClean","airflow","noClutter","signalOk"];return acc+keys.filter(k=>z[k]==="Yes").length;},0):0;
+      // Every recorded check counts toward the total; whether it counts as
+      // a "pass" depends on the same polarity used for the colour coding
+      // above — a correct "No" on a problem-style question (no cracks
+      // found, no debris blocking vents) is a pass, not a non-answer.
+      // Previously this excluded those questions from ever counting as a
+      // pass at all, which meant a perfectly clean zone still dragged the
+      // percentage down for every problem-style question it correctly
+      // answered "No" to.
+      const ALL_CHECK_KEYS=["touchOk","cameraOk","cracks","fixings","ventBlocked","dirtyCorners","hotItems","cablesOk","dustInternal","soundOk","volumeOk","lightOk","projOn","motionOk","soundCalib","equipClean","airflow","noClutter","signalOk","deadPixels","colourOk","soundCalib2","animalsWorking","animalsPresent","otherOk"];
+      const CHECK_INVERTED=new Set(["cracks","ventBlocked","dirtyCorners","hotItems","dustInternal","deadPixels"]);
+      const totalChecks=s.zoneData?Object.values(s.zoneData).reduce((acc,z)=>acc+ALL_CHECK_KEYS.filter(k=>z[k]==="Yes"||z[k]==="No").length,0):0;
+      const yesChecks=s.zoneData?Object.values(s.zoneData).reduce((acc,z)=>acc+ALL_CHECK_KEYS.filter(k=>{const v=z[k];if(v!=="Yes"&&v!=="No")return false;return CHECK_INVERTED.has(k)?v==="No":v==="Yes";}).length,0):0;
       const totalBeforePhotos=s.photos?Object.values(s.photos).reduce((a,arr)=>a+(Array.isArray(arr)?arr.length:0),0):0;
       const totalAfterPhotos=s.afterPhotos?Object.values(s.afterPhotos).reduce((a,arr)=>a+(Array.isArray(arr)?arr.length:0),0):0;
       if(!totalZones)return "";
@@ -1933,6 +1967,13 @@ const win=window.open("","_blank");
         return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:7px"><div style="width:150px;font-size:12px;color:#333;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${zoneName}</div><div style="flex:1;height:11px;background:#f0f0f8;border-radius:6px;overflow:hidden"><div style="height:100%;width:100%;background:${col};border-radius:6px"></div></div><div style="width:60px;font-size:12px;font-weight:700;color:${col}">${z.condition||"-"}</div></div>`;
       };
       const iconClock='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a1aff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+      // A callout is scoped to whatever was reported, not the whole site —
+      // "X of Y zones serviced" would make a perfectly successful, targeted
+      // visit look incomplete. Only show that comparison for a quarterly
+      // (or quarterly + callout) visit, where full-site coverage is the point.
+      const svcTypes=s.serviceTypes||[s.serviceType]||[];
+      const isCalloutOnly=svcTypes.filter(Boolean).length>0&&svcTypes.filter(Boolean).every(t=>t==="CALLOUT");
+      const iconLightning='<svg width="20" height="20" viewBox="0 0 24 24" fill="#1a1aff"><path d="M13 2L3 14h7l-1 8 11-14h-7l1-6z"/></svg>';
       const iconImage='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a1aff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10.5" r="1.5"/><path d="M21 15l-5-5L5 19"/></svg>';
       const iconWrench='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00a550" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>';
       const iconCalCheck='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00a550" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><polyline points="8 15 10.5 17.5 16 12"/></svg>';
@@ -1940,7 +1981,7 @@ const win=window.open("","_blank");
       return `<div style="background:#f8f8ff;border-radius:12px;padding:20px 24px;margin-bottom:24px;border:1px solid #e8e8ff">
         <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#1a1aff;margin-bottom:14px">Service Summary</div>
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
-          <div style="background:#fff;border-radius:8px;padding:12px;border:1px solid #e8e8ff">${iconClock}<div style="display:flex;align-items:baseline;gap:4px;margin-top:6px"><div style="font-size:20px;font-weight:800;color:#1a1aff">${totalZones}</div>${siteZoneCount>totalZones?`<div style="font-size:12px;color:#8888c0">of ${siteZoneCount}</div>`:""}</div><div style="font-size:10px;color:#888;margin-top:1px;display:flex;align-items:center;gap:4px">ZONES SERVICED${siteZoneCount<=totalZones?iconTick:""}</div></div>
+          <div style="background:#fff;border-radius:8px;padding:12px;border:1px solid #e8e8ff">${isCalloutOnly?iconLightning:iconClock}<div style="font-size:20px;font-weight:800;color:#1a1aff;margin-top:6px">${totalZones}</div><div style="font-size:10px;color:#888;margin-top:1px;display:flex;align-items:center;gap:4px">${isCalloutOnly?(totalZones===1?"ZONE ATTENDED":"ZONES ATTENDED"):`ZONES SERVICED${siteZoneCount<=totalZones?iconTick:""}`}</div></div>
           <div style="background:#fff;border-radius:8px;padding:12px;border:1px solid #e8e8ff">${iconImage}<div style="font-size:20px;font-weight:800;color:#1a1aff;margin-top:6px">${totalBeforePhotos+totalAfterPhotos}</div><div style="font-size:10px;color:#888;margin-top:1px">PHOTOS &amp; VIDEO</div></div>
           <div style="background:#f0fbf4;border-radius:8px;padding:12px;border:1px solid #b8e6c8">${iconWrench}<div style="font-size:20px;font-weight:800;color:#00a550;margin-top:6px">${goodZones}</div><div style="font-size:10px;color:#00a550;margin-top:1px">GOOD CONDITION</div></div>
           <div style="background:${s.followup==="Yes"?"#fff8f0":"#f0fbf4"};border-radius:8px;padding:12px;border:1px solid ${s.followup==="Yes"?"#f0dcc0":"#b8e6c8"}">${iconCalCheck.replace('stroke="#00a550"','stroke="'+(s.followup==="Yes"?"#d97000":"#00a550")+'"')}<div style="font-size:20px;font-weight:800;color:${s.followup==="Yes"?"#d97000":"#00a550"};margin-top:6px">${s.followup||"-"}</div><div style="font-size:10px;color:${s.followup==="Yes"?"#d97000":"#00a550"};margin-top:1px">FOLLOW-UP NEEDED</div></div>
