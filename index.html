@@ -894,7 +894,8 @@ function showSuccess(sub){
     `<div class="rr"><span class="rl2">Technician</span><span class="rv">${sub.techName}</span></div>`+
     `<div class="rr"><span class="rl2">Service</span><span class="rv">${tagHtml}</span></div>`+
     `<div class="rr"><span class="rl2">Submitted</span><span class="rv">${new Date(sub.timestamp).toLocaleString("en-AU")}</span></div>`+
-    `<div style="margin-top:12px;padding:10px 12px;background:var(--gl);border-radius:var(--rsm);font-size:13px;color:var(--grn)">&#10003; Report sent to TKM9 Service Desk${sub.driveFolderUrl?' &middot; <a href="'+sub.driveFolderUrl+'" target="_blank" style="color:var(--grn)">View photos in Drive</a>':""}</div>`;
+    `<div style="margin-top:12px;padding:10px 12px;background:var(--gl);border-radius:var(--rsm);font-size:13px;color:var(--grn)">&#10003; Report sent to TKM9 Service Desk${sub.driveFolderUrl?' &middot; <a href="'+sub.driveFolderUrl+'" target="_blank" style="color:var(--grn)">View photos in Drive</a>':""}</div>`+
+    (adminLoggedIn?`<button class="btn bp" style="width:100%;margin-top:14px" onclick="downloadSubPDF(SUBMISSIONS.findIndex(x=>x.id==='${sub.id}'))">&#8595; Download Report</button>`:"");
   document.getElementById("bottom-nav").style.display="none";
 }
 
@@ -1587,9 +1588,10 @@ function deleteSubmission(){
   showToast("Report deleted");
 }
 
-function downloadSubPDF(){
-  if(currentSubIdx===null)return;
-  let s=SUBMISSIONS[currentSubIdx];
+function downloadSubPDF(idx){
+  const i=(idx!==undefined&&idx!==null)?idx:currentSubIdx;
+  if(i===null||i===undefined||!SUBMISSIONS[i])return;
+  let s=SUBMISSIONS[i];
   const client=CLIENTS[s.clientSlug];
   if(client&&client.zones){client.zones.forEach((z,i)=>{if(!z.id)z.id="z"+(i+1);});}
   const now=new Date();
