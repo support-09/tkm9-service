@@ -1662,8 +1662,10 @@ function downloadSubPDF(idx){
   const _dateStr=(_sdParsed&&!isNaN(_sdParsed))?_sdParsed.toISOString().slice(0,10).replace(/-/g,""):"unknown";
   const filename="TKM9_SERVICE_"+((s.clientName||"").replace(/[^a-z0-9]/gi,"_"))+"_"+_dateStr+"_"+(s.serviceType||"").replace(/[^a-z0-9]/gi,"_")+".pdf";
 
+  const tagIcons={"Q1: JAN-MAR":'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',"Q2: APR-JUN":'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',"Q3: JUL-SEP":'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',"Q4: OCT-DEC":'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',"CALLOUT":'<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h7l-1 8 11-14h-7l1-6z"/></svg>'};
   const tagMap={"Q1: JAN-MAR":["#e8e8ff","#1a1aff"],"Q2: APR-JUN":["#e6f7ef","#00a550"],"Q3: JUL-SEP":["#fff3e0","#d97000"],"Q4: OCT-DEC":["#f3eeff","#7744cc"],"CALLOUT":["#ffebee","#cc2233"]};
-  const tags=(s.serviceTypes||[s.serviceType]).filter(Boolean).map(t=>{const[bg,col]=tagMap[t]||["#eee","#333"];return`<span style="background:${bg};color:${col};padding:4px 14px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.06em;margin-left:6px">${t}</span>`;}).join("");
+  const tagLabels={"Q1: JAN-MAR":"Q1 · Jan–Mar","Q2: APR-JUN":"Q2 · Apr–Jun","Q3: JUL-SEP":"Q3 · Jul–Sep","Q4: OCT-DEC":"Q4 · Oct–Dec","CALLOUT":"Callout"};
+  const tags=(s.serviceTypes||[s.serviceType]).filter(Boolean).map(t=>{const[bg,col]=tagMap[t]||["#eee","#333"];const icon=tagIcons[t]||"";return`<span style="display:inline-flex;align-items:center;gap:7px;background:${bg};color:${col};padding:9px 14px;border-radius:10px;font-size:12px;font-weight:800;margin-left:8px">${icon}${tagLabels[t]||t}</span>`;}).join("");
 
   const checkLabels={"touchOk":"Touch Working on All Areas of Game","cameraOk":"Camera Securely in Place","cracks":"Visual Cracks or Damage","fixings":"All Fixings Secure","ventBlocked":"Debris Blocking Ventilation Holes","dirtyCorners":"Build-up or Dirt in Screen Corners","hotItems":"Electrical Items Hot to Touch","cablesOk":"All Cables Securely in Place","dustInternal":"Dust or Debris Build-up Internally","soundOk":"Sound Working on All Items","volumeOk":"Volume Level Adequate","lightOk":"Lighting Working on All Items","projOn":"Projection On and Aligned to Canvas","motionOk":"All Motion Detection Sensors Working","soundCalib":"Sound Working and Calibrated","equipClean":"Equipment Clean and Clear of Dust","deadPixels":"Damaged Pixels on LED Panels","colourOk":"Colour and Calibration Correct","soundCalib2":"Sound Calibration Correct","animalsWorking":"All Animals Working with Screen","animalsPresent":"All Animals Present in Tray","airflow":"Airflow and Heat OK for All Equipment","noClutter":"Room Clear of Clutter","signalOk":"Signal Strength as Intended","otherOk":"All Other Items Checked and OK"};
   const condCol=c=>c==="Good"?"#00a550":c==="Poor"?"#cc2233":"#d97000";
@@ -1817,15 +1819,17 @@ function downloadSubPDF(idx){
             const src=typeof p==="object"?(p.data||""):"";
             const url=typeof p==="object"?(p.driveUrl||""):"";
             const driveId=typeof p==="object"?(p.driveId||""):"";
-            if(src){
-              h+=`<div style="position:relative;width:160px;height:110px;background:#0e0e22;border-radius:8px;overflow:hidden"><video style="width:100%;height:100%;object-fit:cover" src="${src}" controls preload="metadata"></video></div>`;
-            } else if(url||driveId){
-              // Use Drive's own hosted viewer page when we have a driveId —
-              // it can preview formats like .mov that browsers can't play
-              // inline from a raw file link, which otherwise just triggers
-              // a download with no proper filename.
+            if(url||driveId){
+              // A real, saved PDF file cannot play an embedded <video> —
+              // once the browser flattens the page into an actual PDF,
+              // video controls stop working and it just becomes a static,
+              // unplayable frame. A clickable link is the only thing that
+              // reliably survives that conversion, so it's used whenever
+              // a Drive link is available, even if a local preview exists.
               const openUrl=driveId?`https://drive.google.com/file/d/${driveId}/view`:url;
               h+=`<a href="${openUrl}" target="_blank" style="position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;width:160px;height:110px;background:#0e0e22;border-radius:8px;color:#fff;font-size:13px;font-weight:700;text-decoration:none;overflow:hidden"><span style="position:relative;font-size:22px">▶</span><span style="position:relative;font-size:11px;margin-top:4px">View Video</span></a>`;
+            } else if(src){
+              h+=`<div style="position:relative;width:160px;height:110px;background:#0e0e22;border-radius:8px;overflow:hidden"><video style="width:100%;height:100%;object-fit:cover" src="${src}" controls preload="metadata"></video></div>`;
             } else {
               h+=`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:160px;height:110px;background:#f5f5fa;border:1px dashed #ccc;border-radius:8px;color:#999;font-size:11px;font-weight:600;text-align:center">&#9888;<br>Unavailable</div>`;
             }
@@ -1912,6 +1916,7 @@ const win=window.open("","_blank");
 
     ${(()=>{
       const totalZones=s.zoneData?Object.keys(s.zoneData).length:0;
+      const siteZoneCount=((CLIENTS[s.clientSlug]||{}).zones||[]).length||totalZones;
       const goodZones=s.zoneData?Object.values(s.zoneData).filter(z=>z.condition==="Good").length:0;
       const medZones=s.zoneData?Object.values(s.zoneData).filter(z=>z.condition==="Medium").length:0;
       const poorZones=s.zoneData?Object.values(s.zoneData).filter(z=>z.condition==="Poor").length:0;
@@ -1922,39 +1927,26 @@ const win=window.open("","_blank");
       if(!totalZones)return "";
       const pct=totalChecks>0?Math.round(yesChecks/totalChecks*100):0;
       const bar=(col,w,label)=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><div style="width:80px;font-size:11px;color:#555">${label}</div><div style="flex:1;height:10px;background:#f0f0f8;border-radius:5px;overflow:hidden"><div style="height:100%;width:${w}%;background:${col};border-radius:5px"></div></div><div style="width:36px;font-size:11px;font-weight:700;text-align:right;color:${col}">${w}%</div></div>`;
-      const zoneBreakdown=totalZones>0?`<div style="margin-bottom:16px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#6b6f8a;margin-bottom:8px">Zone Condition Breakdown</div><div style="display:flex;height:14px;border-radius:7px;overflow:hidden">${goodZones>0?`<div style="width:${Math.round(goodZones/totalZones*100)}%;background:#00a550"></div>`:""}${medZones>0?`<div style="width:${Math.round(medZones/totalZones*100)}%;background:#d97000"></div>`:""}${poorZones>0?`<div style="width:${Math.round(poorZones/totalZones*100)}%;background:#cc2233"></div>`:""}</div><div style="display:flex;gap:14px;margin-top:6px;font-size:10px;color:#666">${goodZones>0?`<span>&#9679; Good (${goodZones})</span>`:""}${medZones>0?`<span style="color:#d97000">&#9679; Medium (${medZones})</span>`:""}${poorZones>0?`<span style="color:#cc2233">&#9679; Poor (${poorZones})</span>`:""}</div></div>`:"";
+      const zoneBar=(zid,z)=>{
+        const zoneName=((CLIENTS[s.clientSlug]||{}).zones||[]).find((zz,i)=>(zz.id||"z"+(i+1))===zid)?.name||("Zone "+zid.replace("z",""));
+        const col=condCol(z.condition||"");
+        return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:7px"><div style="width:150px;font-size:12px;color:#333;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${zoneName}</div><div style="flex:1;height:11px;background:#f0f0f8;border-radius:6px;overflow:hidden"><div style="height:100%;width:100%;background:${col};border-radius:6px"></div></div><div style="width:60px;font-size:12px;font-weight:700;color:${col}">${z.condition||"-"}</div></div>`;
+      };
+      const iconClock='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a1aff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+      const iconImage='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a1aff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10.5" r="1.5"/><path d="M21 15l-5-5L5 19"/></svg>';
+      const iconWrench='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00a550" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>';
+      const iconCalCheck='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00a550" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><polyline points="8 15 10.5 17.5 16 12"/></svg>';
+      const iconTick='<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#00a550" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
       return `<div style="background:#f8f8ff;border-radius:12px;padding:20px 24px;margin-bottom:24px;border:1px solid #e8e8ff">
         <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#1a1aff;margin-bottom:14px">Service Summary</div>
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
-          <div style="text-align:center;background:#fff;border-radius:8px;padding:10px;border:1px solid #e8e8ff"><div style="font-size:22px;font-weight:800;color:#1a1aff">${totalZones}</div><div style="font-size:10px;color:#888;margin-top:2px">Zones Serviced</div></div>
-          <div style="text-align:center;background:#fff;border-radius:8px;padding:10px;border:1px solid #e8e8ff"><div style="font-size:22px;font-weight:800;color:#00a550">${goodZones}</div><div style="font-size:10px;color:#888;margin-top:2px">Good Condition</div></div>
-          <div style="text-align:center;background:#fff;border-radius:8px;padding:10px;border:1px solid #e8e8ff"><div style="font-size:22px;font-weight:800;color:#1a1aff">${totalBeforePhotos+totalAfterPhotos}</div><div style="font-size:10px;color:#888;margin-top:2px">Photos &amp; Videos</div></div>
-          <div style="text-align:center;background:#fff;border-radius:8px;padding:10px;border:1px solid #e8e8ff"><div style="font-size:22px;font-weight:800;color:${s.followup==="Yes"?"#cc2233":"#00a550"}">${s.followup||"-"}</div><div style="font-size:10px;color:#888;margin-top:2px">Follow-up</div></div>
+          <div style="background:#fff;border-radius:8px;padding:12px;border:1px solid #e8e8ff">${iconClock}<div style="display:flex;align-items:baseline;gap:4px;margin-top:6px"><div style="font-size:20px;font-weight:800;color:#1a1aff">${totalZones}</div>${siteZoneCount>totalZones?`<div style="font-size:12px;color:#8888c0">of ${siteZoneCount}</div>`:""}</div><div style="font-size:10px;color:#888;margin-top:1px;display:flex;align-items:center;gap:4px">ZONES SERVICED${siteZoneCount<=totalZones?iconTick:""}</div></div>
+          <div style="background:#fff;border-radius:8px;padding:12px;border:1px solid #e8e8ff">${iconImage}<div style="font-size:20px;font-weight:800;color:#1a1aff;margin-top:6px">${totalBeforePhotos+totalAfterPhotos}</div><div style="font-size:10px;color:#888;margin-top:1px">PHOTOS &amp; VIDEO</div></div>
+          <div style="background:#f0fbf4;border-radius:8px;padding:12px;border:1px solid #b8e6c8">${iconWrench}<div style="font-size:20px;font-weight:800;color:#00a550;margin-top:6px">${goodZones}</div><div style="font-size:10px;color:#00a550;margin-top:1px">GOOD CONDITION</div></div>
+          <div style="background:${s.followup==="Yes"?"#fff8f0":"#f0fbf4"};border-radius:8px;padding:12px;border:1px solid ${s.followup==="Yes"?"#f0dcc0":"#b8e6c8"}">${iconCalCheck.replace('stroke="#00a550"','stroke="'+(s.followup==="Yes"?"#d97000":"#00a550")+'"')}<div style="font-size:20px;font-weight:800;color:${s.followup==="Yes"?"#d97000":"#00a550"};margin-top:6px">${s.followup||"-"}</div><div style="font-size:10px;color:${s.followup==="Yes"?"#d97000":"#00a550"};margin-top:1px">FOLLOW-UP NEEDED</div></div>
         </div>
-        ${zoneBreakdown}
-        ${totalChecks>0?`<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#6b6f8a;margin-bottom:8px">Checks Passed</div>${bar("#00a550",pct,"Overall")}${goodZones>0?bar("#00a550",Math.round(goodZones/totalZones*100),"Good"):""}${medZones>0?bar("#d97000",Math.round(medZones/totalZones*100),"Medium"):""}${poorZones>0?bar("#cc2233",Math.round(poorZones/totalZones*100),"Poor"):""}`:""}</div>`;
-    })()}
-    ${(()=>{
-      // One-glance "anything flagged" box — surfaces problems right up top
-      // instead of making the reader dig through every zone to find them.
-      const positiveLabels={touchOk:"Touch Working",cameraOk:"Camera Secure",fixings:"Fixings Secure",cablesOk:"Cables Secure",soundOk:"Sound Working",volumeOk:"Volume Adequate",lightOk:"Lighting Working",projOn:"Projection Aligned",motionOk:"Motion Sensors Working",soundCalib:"Sound Calibrated",soundCalib2:"Sound Calibration",equipClean:"Equipment Clean",airflow:"Airflow OK",noClutter:"Room Clear of Clutter",signalOk:"Signal Strength OK",colourOk:"Colour/Calibration Correct",animalsWorking:"Animals Working with Screen",animalsPresent:"All Animals Present",otherOk:"Other Items OK"};
-      const problemLabels={cracks:"Visual Cracks or Damage",ventBlocked:"Ventilation Blocked",dirtyCorners:"Dirt in Screen Corners",hotItems:"Electrical Items Hot to Touch",dustInternal:"Internal Dust Build-up",deadPixels:"Damaged LED Pixels"};
-      const flags=[];
-      if(s.zoneData){
-        Object.entries(s.zoneData).forEach(([zid,z])=>{
-          const zoneName=((CLIENTS[s.clientSlug]||{}).zones||[]).find(zz=>zz.id===zid)?.name||("Zone "+zid.replace("z",""));
-          if(z.condition==="Poor")flags.push({zone:zoneName,text:"Condition on arrival: Poor"});
-          else if(z.condition==="Medium")flags.push({zone:zoneName,text:"Condition on arrival: Medium"});
-          Object.entries(positiveLabels).forEach(([k,label])=>{if(z[k]==="No")flags.push({zone:zoneName,text:label+" — No"});});
-          Object.entries(problemLabels).forEach(([k,label])=>{if(z[k]==="Yes")flags.push({zone:zoneName,text:label});});
-        });
-      }
-      if(s.followup==="Yes")flags.push({zone:null,text:"Follow-up work required"+(s.overallNotes?" — see notes above":"")});
-      if(!flags.length){
-        return `<div style="display:flex;align-items:center;gap:10px;background:#e6f7ef;border-radius:10px;padding:14px 18px;margin-bottom:24px"><span style="font-size:20px">&#9989;</span><div><div style="font-weight:700;font-size:13px;color:#00a550">All Systems Normal</div><div style="font-size:12px;color:#555">No issues identified during this visit.</div></div></div>`;
-      }
-      const items=flags.map(f=>`<div style="display:flex;gap:8px;padding:6px 0;border-bottom:1px solid #ffe0e0;font-size:12px">&#9888;&#65039;&nbsp;<div>${f.zone?`<strong>${f.zone}:</strong> `:""}${f.text}</div></div>`).join("");
-      return `<div style="background:#fff5f5;border:1px solid #ffd0d0;border-radius:10px;padding:16px 20px;margin-bottom:24px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:18px">&#9888;&#65039;</span><div style="font-weight:700;font-size:13px;color:#cc2233">Attention Required — ${flags.length} item${flags.length>1?"s":""} flagged</div></div>${items}</div>`;
+        ${totalChecks>0?`<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#6b6f8a;margin-bottom:8px">Checks Passed</div>${bar("#00a550",pct,"Overall")}${goodZones>0?bar("#00a550",Math.round(goodZones/totalZones*100),"Good"):""}${medZones>0?bar("#d97000",Math.round(medZones/totalZones*100),"Medium"):""}${poorZones>0?bar("#cc2233",Math.round(poorZones/totalZones*100),"Poor"):""}`:""}
+        ${totalZones>1?`<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#6b6f8a;margin:18px 0 8px">Condition by Zone</div>${Object.entries(s.zoneData).map(([zid,z])=>zoneBar(zid,z)).join("")}`:""}</div>`;
     })()}
     ${zonesHtml}
     <div style="display:flex;align-items:center;gap:12px;background:#f0fbf4;border:1px solid #b8e6c8;border-radius:10px;padding:14px 20px;margin-top:8px">
