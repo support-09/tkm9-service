@@ -769,20 +769,34 @@ async function compressImage(dataUrl,maxKB){
     img.src=dataUrl;
   });
 }
+// Multiple photos/videos can start uploading almost simultaneously (e.g.
+// a tech adds a photo and a video to a zone together). They all need the
+// same submission folder in Drive. Without this guard, several of them
+// could each see "no folder yet" at the same instant and each create their
+// own separate folder — silently splitting that report's files across
+// folders, with only one folder ever remembered. This makes every upload
+// share a single in-flight request instead of racing to create their own.
+let _folderCreationPromise=null;
+async function ensureDriveFolder(){
+  if(S.driveFolderId)return S.driveFolderId;
+  if(_folderCreationPromise)return _folderCreationPromise;
+  _folderCreationPromise=(async()=>{
+    const subId="sub_"+Date.now()+"_"+S.slug;
+    const uploadParams=new URLSearchParams({type:"getUploadUrl",clientName:S.client?S.client.name:"Unknown",submissionId:subId});
+    try{
+      const data=await jsonpRequest(APPS_SCRIPT_URL+"?"+uploadParams.toString());
+      if(data.status==="success"){S.driveFolderId=data.folderId;S.driveFolderUrl=data.folderUrl;return S.driveFolderId;}
+      console.error("getUploadUrl error:",data.message);return null;
+    }catch(e){console.error("getUploadUrl error:",e.message);return null;}
+  })();
+  return _folderCreationPromise;
+}
 async function uploadToDrive(item,zid){
   if(!APPS_SCRIPT_URL||!item.data)return;
   _pendingUploads++;
   try{
-    if(!S.driveFolderId){
-      const subId="sub_"+Date.now()+"_"+S.slug;
-      const uploadParams=new URLSearchParams({type:"getUploadUrl",clientName:S.client?S.client.name:"Unknown",submissionId:subId});
-      let data;
-      try{data=await jsonpRequest(APPS_SCRIPT_URL+"?"+uploadParams.toString());}
-      catch(e){console.error("getUploadUrl error:",e.message);_pendingUploads--;return;}
-      if(data.status==="success"){S.driveFolderId=data.folderId;S.driveFolderUrl=data.folderUrl;}
-      else{console.error("getUploadUrl error:",data.message);_pendingUploads--;return;}
-    }
-    if(!S.driveFolderId){_pendingUploads--;return;}
+    const folderId=await ensureDriveFolder();
+    if(!folderId){_pendingUploads--;return;}
     // Compress images before upload (not videos)
     const uploadData=item.type&&item.type.startsWith("video")?item.data:await compressImage(item.data,800);
     const b64=uploadData.split(",")[1];
@@ -793,9 +807,9 @@ async function uploadToDrive(item,zid){
     // retry a few times with a short gap instead of one long fixed wait —
     // this lets small photos confirm quickly rather than always waiting
     // the full delay that only large videos actually need.
-    const photoPayload={type:"uploadPhoto",folderId:S.driveFolderId,fileData:b64,mimeType:mimeType,fileName:item.name||("photo_"+Date.now())};
+    const photoPayload={type:"uploadPhoto",folderId:folderId,fileData:b64,mimeType:mimeType,fileName:item.name||("photo_"+Date.now())};
     await fetch(APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:JSON.stringify(photoPayload)});
-    const checkParams=new URLSearchParams({type:"getLastUpload",folderId:S.driveFolderId,fileName:item.name||""});
+    const checkParams=new URLSearchParams({type:"getLastUpload",folderId:folderId,fileName:item.name||""});
     let wait=700;
     for(let attempt=0;attempt<7;attempt++){
       await new Promise(r=>setTimeout(r,wait));
@@ -902,6 +916,7 @@ function showSuccess(sub){
 function hardReset(){
   const wasAssisted=S.assisted;
   initS();S.slug=(new URLSearchParams(window.location.search).get("client")||"").toLowerCase().trim();S.client=CLIENTS[S.slug];
+  _folderCreationPromise=null;
   S.assisted=wasAssisted||new URLSearchParams(window.location.search).has("assisted")||adminLoggedIn;
   syncAssistedButtons();
   ["tech-name","tech-mobile","callout-reason","callout-reporter","overall-notes"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
