@@ -1043,7 +1043,7 @@ function renderClientList(){
   if(!slugs.length){el.innerHTML='<div style="color:var(--mut);font-size:14px;padding:12px 0">No clients found.</div>';return;}
   el.innerHTML=slugs.map(s=>{
     const c=CLIENTS[s],url=NETLIFY_URL+"/?client="+s,assistedUrl=url+"&assisted=1";
-    return `<div class="cliitem" id="cli-${s}"><div class="cli-hdr" onclick="toggleCli('${s}')"><div><div class="cliname">${c.name}</div><span class="clislug">${s}</span></div><div class="cli-chev" id="cli-chev-${s}">&#8250;</div></div><div class="cli-detail" id="cli-det-${s}"><div style="margin-bottom:6px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);margin-bottom:2px">Tech URL (field)</div><div class="cliurl">${url}</div></div><div style="margin-bottom:10px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#1a1aff;margin-bottom:2px">Assisted URL (Mark / Admin — includes AI)</div><div class="cliurl" style="color:#1a1aff">${assistedUrl}</div></div><div class="cliacts"><button class="abtn ac" onclick="copyText('${url}')">Copy Tech URL</button><button class="abtn ae" style="background:#1a1aff;color:#fff;border-color:#1a1aff" onclick="copyText('${assistedUrl}')">Copy Assisted URL</button><button class="abtn ae" onclick="editClient('${s}')">Edit</button><button class="abtn acp" onclick="copyClient('${s}')">Copy</button><button class="abtn ad" onclick="showDeleteConfirm('${s}')">Delete</button></div><div id="del-${s}" class="del-confirm"><input type="text" placeholder="Type exact client name to confirm" id="del-inp-${s}"><div style="display:flex;gap:6px;margin-top:6px"><button class="abtn ad" onclick="confirmDelete('${s}')">Confirm Delete</button><button class="abtn ae" onclick="document.getElementById('del-${s}').style.display='none'">Cancel</button></div></div></div></div>`;
+    return `<div class="cliitem" id="cli-${s}"><div class="cli-hdr" onclick="toggleCli('${s}')"><div><div class="cliname">${c.name}</div><span class="clislug">${s}</span></div><div class="cli-chev" id="cli-chev-${s}">&#8250;</div></div><div class="cli-detail" id="cli-det-${s}"><div style="margin-bottom:6px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);margin-bottom:2px">Tech URL (field)</div><div class="cliurl">${url}</div></div><div style="margin-bottom:10px"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#1a1aff;margin-bottom:2px">Assisted URL (Mark / Admin — includes AI)</div><div class="cliurl" style="color:#1a1aff">${assistedUrl}</div></div><div class="cliacts"><button class="abtn ac" onclick="copyText('${url}')">Copy Tech URL</button><button class="abtn ae" style="background:#1a1aff;color:#fff;border-color:#1a1aff" onclick="copyText('${assistedUrl}')">Copy Assisted URL</button><button class="abtn ae" onclick="editClient('${s}')">Edit Template</button><button class="abtn acp" onclick="copyClient('${s}')">Copy</button><button class="abtn ad" onclick="showDeleteConfirm('${s}')">Delete</button></div><div id="del-${s}" class="del-confirm"><input type="text" placeholder="Type exact client name to confirm" id="del-inp-${s}"><div style="display:flex;gap:6px;margin-top:6px"><button class="abtn ad" onclick="confirmDelete('${s}')">Confirm Delete</button><button class="abtn ae" onclick="document.getElementById('del-${s}').style.display='none'">Cancel</button></div></div></div></div>`;
   }).join("");
 }
 function toggleCli(s){
@@ -1245,27 +1245,41 @@ function deleteFromSheet(ids,deleteAll){
     fetch(APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)}).catch(()=>{});
   }catch(e){}
 }
+let _subsOffset=0;
+let _subsHasMoreOnServer=false;
+const SUBS_BATCH=50;
 function renderSubmissions(){
+  _subsOffset=0;
+  _subsHasMoreOnServer=false;
   try{SUBMISSIONS=JSON.parse(localStorage.getItem("tkm9_submissions")||"[]");}catch(e){}
   const deletedIds=getDeletedIds();
   if(deletedIds.size){SUBMISSIONS=SUBMISSIONS.filter(s=>!deletedIds.has(s.id));}
   const el=document.getElementById("submissions-list");
   el.innerHTML='<div style="display:flex;align-items:center;gap:10px;color:var(--mut);font-size:14px;padding:16px 0"><span class="spin-dark"></span><span id="subs-loading-msg">Loading submissions...</span></div>';
-  // Google's own service can take longer to respond on a cold start — this
-  // isn't a hang, just Google spinning back up. Reassure rather than leave
-  // the person staring at unchanging text.
-  const _loadingTimeout=setTimeout(()=>{
-    const msgEl=document.getElementById("subs-loading-msg");
-    if(msgEl)msgEl.textContent="Still loading — Google can take a few extra seconds sometimes.";
-  },4000);
-  // Fetch from Google Sheet using JSONP to avoid CORS
+  fetchSubmissionsBatch(true);
+}
+function fetchSubmissionsBatch(isInitial){
+  // Only reads the most recent SUBS_BATCH rows from the Sheet, not the
+  // entire history — this is the actual fix for the slow loading. Older
+  // reports are fetched on demand via "Load older reports" instead of
+  // every single time the tab opens.
+  const deletedIds=getDeletedIds();
+  let _loadingTimeout=null;
+  if(isInitial){
+    _loadingTimeout=setTimeout(()=>{
+      const msgEl=document.getElementById("subs-loading-msg");
+      if(msgEl)msgEl.textContent="Still loading — Google can take a few extra seconds sometimes.";
+    },4000);
+  }
   const cbName="tkm9cb"+Date.now();
   window[cbName]=function(data){
     try{delete window[cbName];}catch(e){}
-    clearTimeout(_loadingTimeout);
+    if(_loadingTimeout)clearTimeout(_loadingTimeout);
     const s2=document.getElementById("gs-script");
     if(s2)s2.remove();
     if(data&&data.status==="success"&&data.submissions){
+      _subsHasMoreOnServer=!!data.hasMore;
+      _subsOffset+=data.submissions.length;
       // Self-clean the tombstone list: once a report no longer comes back
       // from the Sheet, the delete has taken effect there and we don't
       // need to keep remembering it.
@@ -1292,15 +1306,22 @@ function renderSubmissions(){
         }
       });
       safeLocalSave();
+      if(!isInitial)_subsShowing+=SUBS_BATCH;
+    } else {
+      _subsHasMoreOnServer=false;
     }
     renderSubmissionsList();
   };
   const sc=document.createElement("script");
   sc.id="gs-script";
-  sc.src=APPS_SCRIPT_URL+"?type=getSubmissions&callback="+cbName+"&t="+Date.now();
-  sc.onerror=function(){clearTimeout(_loadingTimeout);renderSubmissionsList();};
-  setTimeout(function(){if(window[cbName]){delete window[cbName];clearTimeout(_loadingTimeout);renderSubmissionsList();}},8000);
+  sc.src=APPS_SCRIPT_URL+"?type=getSubmissions&limit="+SUBS_BATCH+"&offset="+_subsOffset+"&callback="+cbName+"&t="+Date.now();
+  sc.onerror=function(){if(_loadingTimeout)clearTimeout(_loadingTimeout);renderSubmissionsList();};
+  setTimeout(function(){if(window[cbName]){delete window[cbName];if(_loadingTimeout)clearTimeout(_loadingTimeout);renderSubmissionsList();}},8000);
   document.head.appendChild(sc);
+}
+function loadOlderSubmissions(btn){
+  if(btn){btn.disabled=true;btn.textContent="Loading older reports...";}
+  fetchSubmissionsBatch(false);
 }
 let _subsShowing=10;
 let _filteredSubs=null;
@@ -1319,7 +1340,15 @@ function renderSubmissionsList(){
     const realIdx=SUBMISSIONS.indexOf(s);return `<div class="sub-item" style="display:flex;align-items:center;gap:10px"><input type="checkbox" class="sub-chk" data-idx="${realIdx}" data-id="${s.id||""}" onchange="updateBulkButtons()" onclick="event.stopPropagation()" style="width:16px;height:16px;flex-shrink:0;cursor:pointer"><div style="flex:1;cursor:pointer" onclick="viewSubmission(${realIdx})"><strong>${s.clientName||"Unknown client"}</strong>${tags?" &mdash; "+tags:""}<div class="sub-meta">${s.techName||"Unknown tech"} &middot; ${dateStr}</div></div></div>`;
   }).join("");
   const remaining=source.length-_subsShowing;
-  const moreBtn=remaining>0?`<div style="padding:10px 0;text-align:center"><button onclick="_subsShowing+=10;renderSubmissionsList()" style="background:var(--su2);border:1.5px solid var(--bor);border-radius:var(--rsm);padding:9px 20px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:var(--mut);cursor:pointer">Show ${Math.min(remaining,10)} more (${remaining} remaining)</button></div>`:"";
+  let moreBtn="";
+  if(remaining>0){
+    moreBtn=`<div style="padding:10px 0;text-align:center"><button onclick="_subsShowing+=10;renderSubmissionsList()" style="background:var(--su2);border:1.5px solid var(--bor);border-radius:var(--rsm);padding:9px 20px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:var(--mut);cursor:pointer">Show ${Math.min(remaining,10)} more (${remaining} remaining)</button></div>`;
+  } else if(_subsHasMoreOnServer&&_filteredSubs===null){
+    // Local pagination is exhausted but the Sheet has older reports we
+    // haven't fetched yet — go get the next batch rather than pretending
+    // this is the full list.
+    moreBtn=`<div style="padding:10px 0;text-align:center"><button onclick="loadOlderSubmissions(this)" style="background:var(--su2);border:1.5px solid var(--bor);border-radius:var(--rsm);padding:9px 20px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:var(--mut);cursor:pointer">Load older reports</button></div>`;
+  }
   el.innerHTML=rows+moreBtn;
 }
 function resetSubsShowing(){_subsShowing=10;}
