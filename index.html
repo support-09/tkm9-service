@@ -446,7 +446,7 @@ document.addEventListener("DOMContentLoaded",()=>{
               const i=SUBMISSIONS.findIndex(s=>s.id===subId);
               if(i>=0){clearInterval(waitForSub);viewSubmission(i);}
             },500);
-            setTimeout(function(){clearInterval(waitForSub);},10000);
+            setTimeout(function(){clearInterval(waitForSub);showToast("Couldn't load that report automatically — find it in the list below");},25000);
           }
         },300);
       } else {
@@ -1032,7 +1032,7 @@ function checkPW(){
             const i=SUBMISSIONS.findIndex(s=>s.id===subId);
             if(i>=0){clearInterval(wait);viewSubmission(i);}
           },500);
-          setTimeout(function(){clearInterval(wait);},10000);
+          setTimeout(function(){clearInterval(wait);showToast("Couldn't load that report automatically — find it in the list below");},25000);
         }
       },300);
     } else {
@@ -1228,7 +1228,18 @@ function adminSaveClient(){
   if(!editingSlug&&CLIENTS[slug]){alert("Slug already exists.");return;}
   const mobHtml=mobile?(mobile.includes("@")?`<a href="mailto:${mobile}">${mobile}</a>`:`<a href="tel:${mobile.replace(/\s/g,"")}">${mobile}</a>`):"";
   CLIENTS[slug]={name,address:addr,contacts:[{icon:"<svg width='1em' height='1em' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' style='display:inline-block;vertical-align:-0.125em'><rect x='3' y='11' width='18' height='11' rx='2'/><path d='M7 11V7a5 5 0 0 1 10 0v4'/></svg>",label:"On Arrival",text:arrival||"Report to reception"},{icon:"<svg width='1em' height='1em' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' style='display:inline-block;vertical-align:-0.125em'><path d='M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z'/></svg>",label:"TKM9 Service Desk",text:mobHtml}],mapEmbed:`https://maps.google.com/maps?q=${encodeURIComponent(addr)}&output=embed`,zones:adminZones.map((z,i)=>Object.assign({},z,{id:z.id||"z"+(i+1),name:z.name||"Zone "+(i+1),scope:z.scope.filter(s=>s.trim())}))};
-  closeModal();renderClientList();document.getElementById("dl-section").style.display="block";showToast("Client saved!");
+  closeModal();renderClientList();document.getElementById("dl-section").style.display="block";showToast("Client saved!");notifyTemplateEdit(name,slug);
+}
+// Fire-and-forget email to Tanya whenever a client template is edited and
+// saved locally — since this only exists in the browser until someone
+// downloads and redeploys, this is the one guaranteed signal that a change
+// happened at all, even if nobody says anything or clicks Download.
+function notifyTemplateEdit(clientName,slug){
+  if(!APPS_SCRIPT_URL)return;
+  try{
+    const payload={type:"templateEditNotify",clientName:clientName,slug:slug};
+    fetch(APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)}).catch(()=>{});
+  }catch(e){}
 }
 
 // SUBMISSIONS
