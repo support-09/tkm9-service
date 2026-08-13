@@ -1226,14 +1226,41 @@ function renderZoneEditor(){
     return `<div class="ze"><button class="zrmbtn" onclick="rmZone(${i})">Remove</button><button class="zrmbtn" style="right:80px;color:var(--blue);border-color:var(--blue)" onclick="duplicateZone(${i})">Duplicate</button><h4>Zone ${i+1}</h4><div class="field"><label>Zone Name</label><input type="text" value="${esc(z.name)}" oninput="adminZones[${i}].name=this.value"></div><div class="field"><label>Reference Photos <span style="font-size:10px;color:var(--grn);font-weight:400;text-transform:none">&#9679; Uploads to Google Drive automatically — double-checked again when you hit Save</span></label><div class="zpuarea"><input type="file" accept="image/*" multiple onchange="handleAdminPhoto(event,${i})"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-0.125em"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg> Upload zone photos</div>${thumbs?'<div class="zphumb">'+thumbs+"</div>":""}</div><div class="field"><label>Floor Plan / Location Map</label><div class="zpuarea"><input type="file" accept="image/*" onchange="handleAdminFP(event,${i})"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-0.125em"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg> Upload floor plan</div>${fpSrc?`<div style="position:relative;display:inline-block;margin-top:6px"><img src="${fpSrc}" style="width:100%;max-height:70px;object-fit:contain;border-radius:6px"><div style="position:absolute;bottom:2px;left:2px;background:${fpIsDrive?"#0a0":"#c80"};color:#fff;font-size:8px;padding:1px 4px;border-radius:3px;font-weight:700">${fpIsDrive?"DRIVE":"LOCAL"}</div></div><br><button onclick="adminZones[${i}].floorplan='';renderZoneEditor()" style="font-size:11px;color:var(--red);background:none;border:none;cursor:pointer;margin-top:4px">Remove</button>`:""}</div><div class="field"><label>Scope Items</label><select onchange="applyZoneTemplate(${i},this.value);this.value=''" style="margin-bottom:8px"><option value="">Start from a template...</option>${templateOptions}</select>${scopeInputs}<button class="addsi" onclick="addScope(${i})">+ Add</button></div><div class="field"><label>Equipment</label><div class="cbrow"><label><input type="checkbox" ${z.hasScreens?"checked":""} onchange="adminZones[${i}].hasScreens=this.checked"> Screens</label><label><input type="checkbox" ${z.hasSound?"checked":""} onchange="adminZones[${i}].hasSound=this.checked"> Sound</label><label><input type="checkbox" ${z.hasLight?"checked":""} onchange="adminZones[${i}].hasLight=this.checked"> Lighting</label><label><input type="checkbox" ${z.hasOther?"checked":""} onchange="adminZones[${i}].hasOther=this.checked"> Other</label></div><div class="cbrow" style="margin-top:6px"><label><input type="checkbox" ${z.isProjection?"checked":""} onchange="adminZones[${i}].isProjection=this.checked"> Projection</label></div></div><div class="field"><label>Sound Items</label><input type="text" value="${(z.soundItems||[]).join(", ")}" oninput="adminZones[${i}].soundItems=this.value.split(',').map(s=>s.trim()).filter(Boolean)"></div><div class="field"><label>Light Items</label><input type="text" value="${(z.lightItems||[]).join(", ")}" oninput="adminZones[${i}].lightItems=this.value.split(',').map(s=>s.trim()).filter(Boolean)"></div><div class="field"><label>Other Items</label><input type="text" value="${(z.otherItems||[]).join(", ")}" oninput="adminZones[${i}].otherItems=this.value.split(',').map(s=>s.trim()).filter(Boolean)"></div></div>`;
   }).join("")+datalistHtml;
 }
+let _zoneRefFolderId=null;
+async function getZoneRefFolderId(){
+  if(_zoneRefFolderId)return _zoneRefFolderId;
+  try{
+    const data=await jsonpRequest(APPS_SCRIPT_URL+"?type=getZoneRefFolderId");
+    if(data.status==="success"){_zoneRefFolderId=data.folderId;return _zoneRefFolderId;}
+  }catch(e){}
+  return null;
+}
 async function uploadAdminPhotoToDrive(file, label){
-  // Returns a Drive URL string, or falls back to base64 if Drive unavailable
+  // Returns a Drive URL string, or null if Drive is genuinely unreachable.
+  // This previously sent a plain POST with a JSON content type, which
+  // Apps Script can never actually respond to (it triggers a browser
+  // preflight check Apps Script has no way to answer) — meaning this
+  // upload was failing every single time, not just occasionally. Fixed
+  // to use the same no-cors send + confirm-by-polling approach already
+  // proven reliable for report photos.
   if(!APPS_SCRIPT_URL) return null;
   try{
+    const folderId=await getZoneRefFolderId();
+    if(!folderId)return null;
     const b64 = await new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result.split(",")[1]);r.onerror=rej;r.readAsDataURL(file);});
-    const resp = await fetch(APPS_SCRIPT_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"uploadZoneRef",fileData:b64,mimeType:file.type||"image/jpeg",fileName:label+"_"+file.name})});
-    const data = await resp.json();
-    if(data.status==="success" && data.fileUrl) return data.fileUrl;
+    const fileName=(label||"photo").replace(/[^\w.\-]/g,"_")+"_"+Date.now()+"_"+Math.random().toString(36).slice(2,8)+"_"+file.name;
+    const payload={type:"uploadZoneRef",fileData:b64,mimeType:file.type||"image/jpeg",fileName:fileName};
+    await fetch(APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:JSON.stringify(payload)});
+    let wait=700;
+    for(let attempt=0;attempt<6;attempt++){
+      await new Promise(r=>setTimeout(r,wait));
+      try{
+        const checkParams=new URLSearchParams({type:"getLastUpload",folderId:folderId,fileName:fileName});
+        const chkData=await jsonpRequest(APPS_SCRIPT_URL+"?"+checkParams.toString());
+        if(chkData.status==="success")return chkData.fileUrl;
+      }catch(e){}
+      wait=Math.min(wait*1.6,3500);
+    }
   }catch(err){console.log("Admin Drive upload error:",err);}
   return null;
 }
@@ -1301,9 +1328,20 @@ async function retryLocalPhotoUpload(dataUri,label){
     const match=dataUri.match(/^data:([^;]+);base64,(.+)$/);
     if(!match)return null;
     const mimeType=match[1],b64=match[2];
-    const resp=await fetch(APPS_SCRIPT_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"uploadZoneRef",fileData:b64,mimeType:mimeType,fileName:label+"_retry_"+Date.now()})});
-    const data=await resp.json();
-    if(data.status==="success"&&data.fileUrl)return data.fileUrl;
+    const folderId=await getZoneRefFolderId();
+    if(!folderId)return null;
+    const fileName=(label||"photo").replace(/[^\w.\-]/g,"_")+"_retry_"+Date.now()+"_"+Math.random().toString(36).slice(2,8);
+    await fetch(APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:JSON.stringify({type:"uploadZoneRef",fileData:b64,mimeType:mimeType,fileName:fileName})});
+    let wait=700;
+    for(let attempt=0;attempt<6;attempt++){
+      await new Promise(r=>setTimeout(r,wait));
+      try{
+        const checkParams=new URLSearchParams({type:"getLastUpload",folderId:folderId,fileName:fileName});
+        const chkData=await jsonpRequest(APPS_SCRIPT_URL+"?"+checkParams.toString());
+        if(chkData.status==="success")return chkData.fileUrl;
+      }catch(e){}
+      wait=Math.min(wait*1.6,3500);
+    }
   }catch(err){console.log("Retry upload error:",err);}
   return null;
 }
@@ -1350,7 +1388,7 @@ async function adminSaveClient(){
     showToast("Checking photos before saving...","ai");
     const stillStuck=await retryAllLocalPhotos(clientObj.zones);
     if(stillStuck>0){
-      const proceed=confirm(stillStuck+" photo"+(stillStuck>1?"s":"")+" couldn't upload to Google Drive (likely a connection issue) and would be saved in a less reliable way. Try again later for the safest result, or save anyway now?\n\nClick OK to save anyway, Cancel to stop and try again.");
+      const proceed=confirm(stillStuck+" photo"+(stillStuck>1?"s":"")+" didn't make it to Google Drive after two tries.\n\nIf you save now, those photo(s) will still be included, but stored in a way that's more likely to cause problems later (they may not show up properly, or the save could fail if there are several of them).\n\nOK = save anyway, with that risk\nCancel = don't save yet — check your internet connection and try uploading those photos again");
       if(!proceed){showToast("Not saved — try uploading those photos again first");return;}
     }
   }
