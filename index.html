@@ -1223,7 +1223,7 @@ function renderZoneEditor(){
     }).join("");
     const fpSrc=z.floorplan||"";
     const fpIsDrive=fpSrc.startsWith("http");
-    return `<div class="ze"><button class="zrmbtn" onclick="rmZone(${i})">Remove</button><button class="zrmbtn" style="right:80px;color:var(--blue);border-color:var(--blue)" onclick="duplicateZone(${i})">Duplicate</button><h4>Zone ${i+1}</h4><div class="field"><label>Zone Name</label><input type="text" value="${esc(z.name)}" oninput="adminZones[${i}].name=this.value"></div><div class="field"><label>Reference Photos <span style="font-size:10px;color:var(--grn);font-weight:400;text-transform:none">&#9679; Upload → auto-saved to Google Drive</span></label><div class="zpuarea"><input type="file" accept="image/*" multiple onchange="handleAdminPhoto(event,${i})"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-0.125em"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg> Upload zone photos</div>${thumbs?'<div class="zphumb">'+thumbs+"</div>":""}</div><div class="field"><label>Floor Plan / Location Map</label><div class="zpuarea"><input type="file" accept="image/*" onchange="handleAdminFP(event,${i})"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-0.125em"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg> Upload floor plan</div>${fpSrc?`<div style="position:relative;display:inline-block;margin-top:6px"><img src="${fpSrc}" style="width:100%;max-height:70px;object-fit:contain;border-radius:6px"><div style="position:absolute;bottom:2px;left:2px;background:${fpIsDrive?"#0a0":"#c80"};color:#fff;font-size:8px;padding:1px 4px;border-radius:3px;font-weight:700">${fpIsDrive?"DRIVE":"LOCAL"}</div></div><br><button onclick="adminZones[${i}].floorplan='';renderZoneEditor()" style="font-size:11px;color:var(--red);background:none;border:none;cursor:pointer;margin-top:4px">Remove</button>`:""}</div><div class="field"><label>Scope Items</label><select onchange="applyZoneTemplate(${i},this.value);this.value=''" style="margin-bottom:8px"><option value="">Start from a template...</option>${templateOptions}</select>${scopeInputs}<button class="addsi" onclick="addScope(${i})">+ Add</button></div><div class="field"><label>Equipment</label><div class="cbrow"><label><input type="checkbox" ${z.hasScreens?"checked":""} onchange="adminZones[${i}].hasScreens=this.checked"> Screens</label><label><input type="checkbox" ${z.hasSound?"checked":""} onchange="adminZones[${i}].hasSound=this.checked"> Sound</label><label><input type="checkbox" ${z.hasLight?"checked":""} onchange="adminZones[${i}].hasLight=this.checked"> Lighting</label><label><input type="checkbox" ${z.hasOther?"checked":""} onchange="adminZones[${i}].hasOther=this.checked"> Other</label></div><div class="cbrow" style="margin-top:6px"><label><input type="checkbox" ${z.isProjection?"checked":""} onchange="adminZones[${i}].isProjection=this.checked"> Projection</label></div></div><div class="field"><label>Sound Items</label><input type="text" value="${(z.soundItems||[]).join(", ")}" oninput="adminZones[${i}].soundItems=this.value.split(',').map(s=>s.trim()).filter(Boolean)"></div><div class="field"><label>Light Items</label><input type="text" value="${(z.lightItems||[]).join(", ")}" oninput="adminZones[${i}].lightItems=this.value.split(',').map(s=>s.trim()).filter(Boolean)"></div><div class="field"><label>Other Items</label><input type="text" value="${(z.otherItems||[]).join(", ")}" oninput="adminZones[${i}].otherItems=this.value.split(',').map(s=>s.trim()).filter(Boolean)"></div></div>`;
+    return `<div class="ze"><button class="zrmbtn" onclick="rmZone(${i})">Remove</button><button class="zrmbtn" style="right:80px;color:var(--blue);border-color:var(--blue)" onclick="duplicateZone(${i})">Duplicate</button><h4>Zone ${i+1}</h4><div class="field"><label>Zone Name</label><input type="text" value="${esc(z.name)}" oninput="adminZones[${i}].name=this.value"></div><div class="field"><label>Reference Photos <span style="font-size:10px;color:var(--grn);font-weight:400;text-transform:none">&#9679; Uploads to Google Drive automatically — double-checked again when you hit Save</span></label><div class="zpuarea"><input type="file" accept="image/*" multiple onchange="handleAdminPhoto(event,${i})"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-0.125em"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg> Upload zone photos</div>${thumbs?'<div class="zphumb">'+thumbs+"</div>":""}</div><div class="field"><label>Floor Plan / Location Map</label><div class="zpuarea"><input type="file" accept="image/*" onchange="handleAdminFP(event,${i})"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-0.125em"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg> Upload floor plan</div>${fpSrc?`<div style="position:relative;display:inline-block;margin-top:6px"><img src="${fpSrc}" style="width:100%;max-height:70px;object-fit:contain;border-radius:6px"><div style="position:absolute;bottom:2px;left:2px;background:${fpIsDrive?"#0a0":"#c80"};color:#fff;font-size:8px;padding:1px 4px;border-radius:3px;font-weight:700">${fpIsDrive?"DRIVE":"LOCAL"}</div></div><br><button onclick="adminZones[${i}].floorplan='';renderZoneEditor()" style="font-size:11px;color:var(--red);background:none;border:none;cursor:pointer;margin-top:4px">Remove</button>`:""}</div><div class="field"><label>Scope Items</label><select onchange="applyZoneTemplate(${i},this.value);this.value=''" style="margin-bottom:8px"><option value="">Start from a template...</option>${templateOptions}</select>${scopeInputs}<button class="addsi" onclick="addScope(${i})">+ Add</button></div><div class="field"><label>Equipment</label><div class="cbrow"><label><input type="checkbox" ${z.hasScreens?"checked":""} onchange="adminZones[${i}].hasScreens=this.checked"> Screens</label><label><input type="checkbox" ${z.hasSound?"checked":""} onchange="adminZones[${i}].hasSound=this.checked"> Sound</label><label><input type="checkbox" ${z.hasLight?"checked":""} onchange="adminZones[${i}].hasLight=this.checked"> Lighting</label><label><input type="checkbox" ${z.hasOther?"checked":""} onchange="adminZones[${i}].hasOther=this.checked"> Other</label></div><div class="cbrow" style="margin-top:6px"><label><input type="checkbox" ${z.isProjection?"checked":""} onchange="adminZones[${i}].isProjection=this.checked"> Projection</label></div></div><div class="field"><label>Sound Items</label><input type="text" value="${(z.soundItems||[]).join(", ")}" oninput="adminZones[${i}].soundItems=this.value.split(',').map(s=>s.trim()).filter(Boolean)"></div><div class="field"><label>Light Items</label><input type="text" value="${(z.lightItems||[]).join(", ")}" oninput="adminZones[${i}].lightItems=this.value.split(',').map(s=>s.trim()).filter(Boolean)"></div><div class="field"><label>Other Items</label><input type="text" value="${(z.otherItems||[]).join(", ")}" oninput="adminZones[${i}].otherItems=this.value.split(',').map(s=>s.trim()).filter(Boolean)"></div></div>`;
   }).join("")+datalistHtml;
 }
 async function uploadAdminPhotoToDrive(file, label){
@@ -1290,7 +1290,48 @@ function duplicateZone(i){
   adminZones.splice(i+1,0,copy);
   renderZoneEditor();
 }
-function adminSaveClient(){
+// Retries uploading a photo that's currently stuck as raw embedded data
+// (shown as the "LOCAL" badge) instead of a proper Drive link. Works
+// directly off the already-captured image data — no need for the
+// original file picker selection, which is long gone by the time someone
+// clicks Save.
+async function retryLocalPhotoUpload(dataUri,label){
+  if(!APPS_SCRIPT_URL||!dataUri||!dataUri.startsWith("data:"))return null;
+  try{
+    const match=dataUri.match(/^data:([^;]+);base64,(.+)$/);
+    if(!match)return null;
+    const mimeType=match[1],b64=match[2];
+    const resp=await fetch(APPS_SCRIPT_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"uploadZoneRef",fileData:b64,mimeType:mimeType,fileName:label+"_retry_"+Date.now()})});
+    const data=await resp.json();
+    if(data.status==="success"&&data.fileUrl)return data.fileUrl;
+  }catch(err){console.log("Retry upload error:",err);}
+  return null;
+}
+// Scans every zone for any photo/floor plan still stuck as raw data and
+// tries once more to get it onto Drive properly before saving. Returns
+// how many, if any, still couldn't make it across — that's the only
+// case anyone should ever need to see a message about.
+async function retryAllLocalPhotos(zones){
+  let remaining=0;
+  for(let i=0;i<zones.length;i++){
+    const z=zones[i];
+    const label=z.name||("Zone "+(i+1));
+    if(z.photos&&z.photos.length){
+      for(let j=0;j<z.photos.length;j++){
+        if(z.photos[j]&&!z.photos[j].startsWith("http")){
+          const url=await retryLocalPhotoUpload(z.photos[j],label);
+          if(url)z.photos[j]=url;else remaining++;
+        }
+      }
+    }
+    if(z.floorplan&&!z.floorplan.startsWith("http")){
+      const url=await retryLocalPhotoUpload(z.floorplan,label+"_floorplan");
+      if(url)z.floorplan=url;else remaining++;
+    }
+  }
+  return remaining;
+}
+async function adminSaveClient(){
   const name=document.getElementById("e-name").value.trim();
   const slug=editingSlug||document.getElementById("e-slug").value.toLowerCase().replace(/[^a-z0-9]/g,"");
   const addr=document.getElementById("e-addr").value.trim();
@@ -1300,6 +1341,19 @@ function adminSaveClient(){
   if(!editingSlug&&CLIENTS[slug]){alert("Slug already exists.");return;}
   const mobHtml=mobile?(mobile.includes("@")?`<a href="mailto:${mobile}">${mobile}</a>`:`<a href="tel:${mobile.replace(/\s/g,"")}">${mobile}</a>`):"";
   const clientObj={name,address:addr,contacts:[{icon:"<svg width='1em' height='1em' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' style='display:inline-block;vertical-align:-0.125em'><rect x='3' y='11' width='18' height='11' rx='2'/><path d='M7 11V7a5 5 0 0 1 10 0v4'/></svg>",label:"On Arrival",text:arrival||"Report to reception"},{icon:"<svg width='1em' height='1em' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' style='display:inline-block;vertical-align:-0.125em'><path d='M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z'/></svg>",label:"TKM9 Service Desk",text:mobHtml}],mapEmbed:`https://maps.google.com/maps?q=${encodeURIComponent(addr)}&output=embed`,zones:adminZones.map((z,i)=>Object.assign({},z,{id:z.id||"z"+(i+1),name:z.name||"Zone "+(i+1),scope:z.scope.filter(s=>s.trim())}))};
+  // Quietly retry any photo that's still stuck as raw data instead of a
+  // proper Drive link before saving — this is what makes the LOCAL/DRIVE
+  // distinction invisible to whoever's using this, instead of something
+  // they need to notice and understand themselves.
+  const hasLocalPhotos=clientObj.zones.some(z=>(z.photos||[]).some(p=>p&&!p.startsWith("http"))||(z.floorplan&&!z.floorplan.startsWith("http")));
+  if(hasLocalPhotos){
+    showToast("Checking photos before saving...","ai");
+    const stillStuck=await retryAllLocalPhotos(clientObj.zones);
+    if(stillStuck>0){
+      const proceed=confirm(stillStuck+" photo"+(stillStuck>1?"s":"")+" couldn't upload to Google Drive (likely a connection issue) and would be saved in a less reliable way. Try again later for the safest result, or save anyway now?\n\nClick OK to save anyway, Cancel to stop and try again.");
+      if(!proceed){showToast("Not saved — try uploading those photos again first");return;}
+    }
+  }
   CLIENTS[slug]=clientObj; // instant local feedback
   closeModal();renderClientList();showToast("Saving...","ai");
   saveClientToSheet(slug,clientObj,function(ok){
