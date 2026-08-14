@@ -501,7 +501,7 @@ function initApp(){
     document.getElementById("invalid-screen").style.display="block";
     return;
   }
-  S.slug=slug;S.client=CLIENTS[slug];S.assisted=p.has("assisted")||adminLoggedIn;
+  S.slug=slug;S.client=CLIENTS[slug];S.assisted=p.has("assisted");
   syncAssistedButtons();
   document.getElementById("screen-1").classList.add("active");
   document.getElementById("bottom-nav").style.display="";
@@ -1031,7 +1031,7 @@ function hardReset(){
   const wasAssisted=S.assisted;
   initS();S.slug=(new URLSearchParams(window.location.search).get("client")||"").toLowerCase().trim();S.client=CLIENTS[S.slug];
   _folderCreationPromise=null;
-  S.assisted=wasAssisted||new URLSearchParams(window.location.search).has("assisted")||adminLoggedIn;
+  S.assisted=wasAssisted||new URLSearchParams(window.location.search).has("assisted");
   syncAssistedButtons();
   ["tech-name","tech-mobile","callout-reason","callout-reporter","overall-notes"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
   document.getElementById("service-date").value=new Date().toISOString().split("T")[0];
