@@ -2297,7 +2297,13 @@ function downloadSubPDF(idx){
   const tagLabels={"Q1: JAN-MAR":"Q1 · Jan–Mar","Q2: APR-JUN":"Q2 · Apr–Jun","Q3: JUL-SEP":"Q3 · Jul–Sep","Q4: OCT-DEC":"Q4 · Oct–Dec","CALLOUT":"Callout"};
   const tags=(s.serviceTypes||[s.serviceType]).filter(Boolean).map(t=>{const[bg,col]=tagMap[t]||["#eee","#333"];const icon=tagIcons[t]||"";return`<span style="display:inline-flex;align-items:center;gap:7px;background:${bg};color:${col};padding:9px 14px;border-radius:10px;font-size:12px;font-weight:800;margin-left:8px">${icon}${tagLabels[t]||t}</span>`;}).join("");
 
-  const checkLabels={"touchOk":"Touch Working on All Areas of Game","cameraOk":"Camera Securely in Place","cracks":"Visual Cracks or Damage","fixings":"All Fixings Secure","ventBlocked":"Debris Blocking Ventilation Holes","dirtyCorners":"Build-up or Dirt in Screen Corners","hotItems":"Electrical Items Hot to Touch","cablesOk":"All Cables Securely in Place","dustInternal":"Dust or Debris Build-up Internally","soundOk":"Sound Working on All Items","volumeOk":"Volume Level Adequate","lightOk":"Lighting Working on All Items","projOn":"Projection On and Aligned to Canvas","motionOk":"All Motion Detection Sensors Working","soundCalib":"Sound Working and Calibrated","equipClean":"Equipment Clean and Clear of Dust","deadPixels":"Damaged Pixels on LED Panels","colourOk":"Colour and Calibration Correct","soundCalib2":"Sound Calibration Correct","animalsWorking":"All Animals Working with Screen","animalsPresent":"All Animals Present in Tray","airflow":"Airflow and Heat OK for All Equipment","noClutter":"Room Clear of Clutter","signalOk":"Signal Strength as Intended","otherOk":"All Other Items Checked and OK"};
+  // Same exact wording as every other screen (Edit Report, zone builder) —
+  // this used to be its own shortened/reworded copy, which is exactly how
+  // a question like "Any damaged pixels on LED panels?" turned into the
+  // ambiguous statement "Damaged Pixels on LED Panels" in the PDF. A
+  // rephrased statement can flip how a Yes/No answer reads, so this list
+  // must always match the source question word-for-word.
+  const checkLabels={"touchOk":"Touch working on ALL areas of the game?","cameraOk":"Camera securely in place (if visible)?","cracks":"Any visual cracks or damage?","fixings":"All fixings secure?","ventBlocked":"Any debris blocking ventilation holes?","dirtyCorners":"Any build-up or dirt in corners of screens?","hotItems":"Any electrical items hot to touch?","cablesOk":"All cables securely in place?","dustInternal":"Dust or debris build-up internally?","soundOk":"Sound working on ALL items?","volumeOk":"Volume level adequate?","lightOk":"Lighting working on ALL items?","projOn":"Projection on and aligned/mapped to canvas?","motionOk":"All 3 motion detection sensors working and calibrated?","soundCalib":"Sound working and calibrated as intended?","equipClean":"Equipment clean and clear of dust and debris?","deadPixels":"Any damaged pixels on LED panels?","colourOk":"Colour and calibration correct?","soundCalib2":"Sound calibration correct?","animalsWorking":"All animals working with screen?","animalsPresent":"All animals present in tray?","airflow":"Airflow and heat OK for all equipment?","noClutter":"Room clear of clutter?","signalOk":"Signal strength as intended?","otherOk":"All other items checked and OK?"};
   const condCol=c=>c==="Good"?"#00a550":c==="Poor"?"#cc2233":"#d97000";
   const YN_INVERTED=new Set(["cracks","ventBlocked","dirtyCorners","hotItems","dustInternal","deadPixels"]);
   const ynGood=(v,k)=>v==="Yes"||v==="No"?(YN_INVERTED.has(k)?v==="No":v==="Yes"):false;
@@ -2381,23 +2387,33 @@ function downloadSubPDF(idx){
       // Service checks — show ALL applicable checks for this zone type
       let checksSection="";
       // Determine which checks apply to this zone
+      // Same exact rule as the live field form (buildZones) and Edit
+      // Report — this used to be its own separate, narrower rule that
+      // excluded the standard checks (touch, cracks, cables, sound,
+      // lighting) for "special" (animal/interactive) zones, which meant
+      // real, answered questions from those zones were being silently
+      // left off the PDF entirely — not reworded, just missing.
       const applicableKeys=[];
-      if(zoneData?.isProjection){applicableKeys.push(...["projOn","motionOk","soundCalib","equipClean"]);}
-      if(zoneData?.isSpecial){applicableKeys.push(...["deadPixels","colourOk","soundCalib2","animalsWorking","animalsPresent"]);}
-      if(zoneData?.isServerRoom){applicableKeys.push(...["airflow","noClutter","signalOk"]);}
-      if(!zoneData?.isServerRoom&&!zoneData?.isProjection&&!zoneData?.isSpecial){
-        if(zoneData?.hasScreens||!zoneData){applicableKeys.push(...["touchOk","cameraOk"]);}
-        applicableKeys.push(...["cracks","fixings","ventBlocked","dirtyCorners","hotItems","cablesOk","dustInternal"]);
-      }
-      if((zoneData?.hasSound||!zoneData)&&!zoneData?.isProjection&&!zoneData?.isSpecial){applicableKeys.push(...["soundOk","volumeOk"]);}
-      if(zoneData?.hasLight&&!zoneData?.isProjection&&!zoneData?.isSpecial){applicableKeys.push("lightOk");}
-      if(zoneData?.hasOther){applicableKeys.push("otherOk");}
+      if(zoneData?.isProjection||!zoneData)applicableKeys.push("projOn","motionOk","soundCalib","equipClean");
+      if(zoneData?.isSpecial)applicableKeys.push("deadPixels","colourOk","soundCalib2","animalsWorking","animalsPresent");
+      if(zoneData?.isServerRoom)applicableKeys.push("airflow","noClutter","signalOk");
+      if(!zoneData||zoneData?.hasScreens)applicableKeys.push("touchOk","cameraOk");
+      if(!zoneData?.isServerRoom&&!zoneData?.isProjection)applicableKeys.push("cracks","fixings","ventBlocked","dirtyCorners","hotItems","cablesOk","dustInternal");
+      if(!zoneData||zoneData?.hasSound)applicableKeys.push("soundOk","volumeOk");
+      if(!zoneData||zoneData?.hasLight)applicableKeys.push("lightOk");
+      if(zoneData?.hasOther)applicableKeys.push("otherOk");
       // If no zone config, fall back to all known checks that have a value
       const excludedForZone=(zoneData&&zoneData.excludedChecks)||[];
       const customChecksForZone=(zoneData&&zoneData.customChecks)||[];
       const customLabelMap={};
       customChecksForZone.forEach(c=>{if(c.text&&c.text.trim()){applicableKeys.push(c.key);customLabelMap[c.key]=c.text;}});
-      const keysToRender=(applicableKeys.length>0?applicableKeys:Object.keys(checkLabels)).filter(k=>!excludedForZone.includes(k));
+      // Safety net: no matter what the rule above decides is "applicable",
+      // any check that was actually answered Yes/No in the field must
+      // always appear on the report. A recorded answer should never be
+      // able to silently disappear because a zone-type rule didn't
+      // anticipate it.
+      const answeredKeys=Object.keys(z).filter(k=>checkLabels[k]&&(z[k]==="Yes"||z[k]==="No"));
+      const keysToRender=Array.from(new Set([...(applicableKeys.length>0?applicableKeys:Object.keys(checkLabels)),...answeredKeys])).filter(k=>!excludedForZone.includes(k));
       checksSection+=`<div style="margin-bottom:20px"><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#6b6f8a;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #eee">Service Checks</div>`;
       checksSection+=`<table style="width:100%;border-collapse:collapse">`;
       keysToRender.forEach(k=>{
