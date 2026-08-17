@@ -925,6 +925,31 @@ async function compressImage(dataUrl,maxKB){
     img.src=dataUrl;
   });
 }
+// The Google Sheet only has one column for zone data (no dedicated photo
+// columns), so photos travel to the Sheet folded inside that same zoneData
+// JSON, then get pulled back out on read. Only safe reference fields are
+// kept (never raw base64) so the Sheet cell stays small — the photo itself
+// already lives in Drive by the time this runs.
+function buildZoneDataForSheet(zoneData,photos,afterPhotos){
+  const packed=JSON.parse(JSON.stringify(zoneData||{}));
+  const clean=p=>({driveUrl:p.driveUrl||"",driveId:p.driveId||"",thumbUrl:p.thumbUrl||"",type:p.type||"",name:p.name||""});
+  Object.keys(packed).forEach(zid=>{
+    const beforeArr=(photos&&photos[zid])||[];
+    const afterArr=(afterPhotos&&afterPhotos[zid])||[];
+    if(beforeArr.length)packed[zid]._photos=beforeArr.map(clean);
+    if(afterArr.length)packed[zid]._afterPhotos=afterArr.map(clean);
+  });
+  return packed;
+}
+function unpackPhotosFromZoneData(zoneData){
+  const photos={},afterPhotos={};
+  const cleaned=JSON.parse(JSON.stringify(zoneData||{}));
+  Object.keys(cleaned).forEach(zid=>{
+    if(cleaned[zid]&&cleaned[zid]._photos){photos[zid]=cleaned[zid]._photos;delete cleaned[zid]._photos;}
+    if(cleaned[zid]&&cleaned[zid]._afterPhotos){afterPhotos[zid]=cleaned[zid]._afterPhotos;delete cleaned[zid]._afterPhotos;}
+  });
+  return{zoneData:cleaned,photos:photos,afterPhotos:afterPhotos};
+}
 // Multiple photos/videos can start uploading almost simultaneously (e.g.
 // a tech adds a photo and a video to a zone together). They all need the
 // same submission folder in Drive. Without this guard, several of them
@@ -953,6 +978,18 @@ async function uploadToDrive(item,zid){
   try{
     const folderId=await ensureDriveFolder();
     if(!folderId){_pendingUploads--;return;}
+    await uploadItemToDriveFolder(item,folderId);
+  }catch(err){console.error("uploadToDrive exception:",err.message);}
+  _pendingUploads--;
+}
+// Does the actual compress+send+confirm work for one photo/video into a
+// known Drive folder. Shared by the live submission form (uploadToDrive,
+// above) and by Edit Report photo adds, which upload into an already-
+// existing submission's folder rather than a brand-new one. Returns
+// true/false so callers know whether it's safe to drop the local copy.
+async function uploadItemToDriveFolder(item,folderId){
+  if(!APPS_SCRIPT_URL||!item.data||!folderId)return false;
+  try{
     // Compress images before upload (not videos)
     const uploadData=item.type&&item.type.startsWith("video")?item.data:await compressImage(item.data,800);
     const b64=uploadData.split(",")[1];
@@ -971,12 +1008,62 @@ async function uploadToDrive(item,zid){
       await new Promise(r=>setTimeout(r,wait));
       try{
         const chkData=await jsonpRequest(APPS_SCRIPT_URL+"?"+checkParams.toString());
-        if(chkData.status==="success"){item.driveUrl=chkData.fileUrl;item.driveId=chkData.fileId;item.thumbUrl=chkData.thumbnailUrl;break;}
+        if(chkData.status==="success"){item.driveUrl=chkData.fileUrl;item.driveId=chkData.fileId;item.thumbUrl=chkData.thumbnailUrl;return true;}
       }catch(e){}
       wait=Math.min(wait*1.6,4000);
     }
-  }catch(err){console.error("uploadToDrive exception:",err.message);}
-  _pendingUploads--;
+  }catch(err){console.error("uploadItemToDriveFolder exception:",err.message);}
+  return false;
+}
+// Finds (or creates, though it should already exist) the Drive folder for
+// an already-submitted report, so Edit Report can add photos into the same
+// folder the original submission used — reuses the same idempotent
+// folder-lookup on the server, so this never creates a duplicate folder.
+let _editFolderPromises={};
+async function ensureFolderForSubmission(s){
+  if(s.driveFolderId)return s.driveFolderId;
+  if(_editFolderPromises[s.id])return _editFolderPromises[s.id];
+  _editFolderPromises[s.id]=(async()=>{
+    const params=new URLSearchParams({type:"getUploadUrl",clientName:s.clientName||"Unknown",submissionId:s.id});
+    try{
+      const data=await jsonpRequest(APPS_SCRIPT_URL+"?"+params.toString());
+      if(data.status==="success"){s.driveFolderId=data.folderId;s.driveFolderUrl=s.driveFolderUrl||data.folderUrl;return s.driveFolderId;}
+    }catch(e){console.error("ensureFolderForSubmission error:",e.message);}
+    return null;
+  })();
+  return _editFolderPromises[s.id];
+}
+// Sends the current state of an already-submitted report back to the
+// Sheet, so edits made in Edit Report — wording, checks, notes, and
+// photos — actually reach the shared record Mark and everyone else read
+// from, not just this browser. Fire-and-forget like the app's other Sheet
+// writes; local storage is already updated by the time this runs, so
+// nothing is lost even if this specific request has trouble landing.
+function syncSubmissionToSheet(s){
+  if(!APPS_SCRIPT_URL)return;
+  try{
+    const enrichedZoneData=buildZoneDataForSheet(s.zoneData||{},s.photos||{},s.afterPhotos||{});
+    const payload={
+      type:"updateSubmission",
+      id:s.id,
+      timestamp:s.timestamp,
+      clientSlug:s.clientSlug,
+      clientName:s.clientName,
+      clientAddress:s.clientAddress,
+      techName:s.techName,
+      techMobile:s.techMobile,
+      serviceDate:s.serviceDate,
+      serviceType:s.serviceType,
+      calloutReason:s.calloutReason,
+      calloutReporter:s.calloutReporter,
+      overallNotes:s.overallNotes,
+      followup:s.followup,
+      photoCount:Object.values(s.photos||{}).flat().length+Object.values(s.afterPhotos||{}).flat().length,
+      driveFolderUrl:s.driveFolderUrl||"",
+      zoneData:JSON.stringify(enrichedZoneData)
+    };
+    fetch(APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)}).catch(()=>{});
+  }catch(e){console.error("syncSubmissionToSheet error:",e.message);}
 }
 
 function renderGrid(zid){
@@ -1048,7 +1135,12 @@ async function submitReport(){
   safeLocalSave();
   if(APPS_SCRIPT_URL){
     try{
-      const payload={...sub,photos:undefined,afterPhotos:undefined,zoneData:JSON.stringify(sub.zoneData),type:"submission"};
+      // Photos used to be stripped out entirely before this request —
+      // meaning they only ever lived in this browser's own memory, never
+      // in the shared Sheet. Fold them into zoneData (the Sheet's only
+      // JSON column) instead, so every device can see them.
+      const enrichedZoneData=buildZoneDataForSheet(sub.zoneData,sub.photos,sub.afterPhotos);
+      const payload={...sub,photos:undefined,afterPhotos:undefined,zoneData:JSON.stringify(enrichedZoneData),type:"submission"};
       await fetch(APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
     }catch(e){}
   }
@@ -1717,17 +1809,30 @@ function fetchSubmissionsBatch(isInitial){
       SUBMISSIONS.forEach(s=>{if(s.id)localMap[s.id]=s;});
       data.submissions.forEach(s=>{
         if(deletedIds.has(s.id))return; // was deleted locally — don't let the Sheet bring it back
+        if(typeof s.zoneData==="string"){try{s.zoneData=JSON.parse(s.zoneData);}catch(e){s.zoneData={};}}
+        // Photos travel to the Sheet folded inside zoneData — pull them
+        // back out here so PDF/Edit/View all keep reading s.photos and
+        // s.afterPhotos exactly like before.
+        const unpacked=unpackPhotosFromZoneData(s.zoneData);
+        s.zoneData=unpacked.zoneData;s.photos=unpacked.photos;s.afterPhotos=unpacked.afterPhotos;
         if(localMap[s.id]){
           // Submission exists locally — local is always truth. Never overwrite.
-          // Only fill zoneData if local has none and Sheet has it
-          if(typeof s.zoneData==="string"){try{s.zoneData=JSON.parse(s.zoneData);}catch(e){s.zoneData={};}}
+          // Only fill in zoneData / photos if local has none and the Sheet
+          // does — this is what lets a device that never saw this report
+          // originally (like Mark opening a report from his own device)
+          // pick up photos that only ever made it to the shared Sheet.
           const local=localMap[s.id];
           if((!local.zoneData||!Object.keys(local.zoneData).length)&&s.zoneData&&Object.keys(s.zoneData).length){
             local.zoneData=s.zoneData;
           }
+          if((!local.photos||!Object.values(local.photos).flat().length)&&s.photos&&Object.values(s.photos).flat().length){
+            local.photos=s.photos;
+          }
+          if((!local.afterPhotos||!Object.values(local.afterPhotos).flat().length)&&s.afterPhotos&&Object.values(s.afterPhotos).flat().length){
+            local.afterPhotos=s.afterPhotos;
+          }
         } else {
-          // New submission from Sheet not in local — parse and add it
-          if(typeof s.zoneData==="string"){try{s.zoneData=JSON.parse(s.zoneData);}catch(e){s.zoneData={};}}
+          // New submission from Sheet not in local — already unpacked, add as-is
           SUBMISSIONS.push(s);localMap[s.id]=s;
         }
       });
@@ -1980,19 +2085,24 @@ async function editAddPhotos(e,zid,which){
   const s=SUBMISSIONS[currentSubIdx];
   if(which==="after"){s.afterPhotos=s.afterPhotos||{};s.afterPhotos[zid]=s.afterPhotos[zid]||[];}
   else{s.photos=s.photos||{};s.photos[zid]=s.photos[zid]||[];}
-  showToast("Adding "+files.length+" photo"+(files.length>1?"s":"")+"...");
+  showToast("Uploading "+files.length+" photo"+(files.length>1?"s":"")+"...");
+  const folderId=await ensureFolderForSubmission(s);
   for(const f of files){
     const r=new FileReader();
-    await new Promise(res=>{r.onload=ev=>{
-      const item={data:ev.target.result,type:f.type,name:f.name,driveUrl:"",driveId:""};
-      if(which==="after")s.afterPhotos[zid].push(item);
-      else s.photos[zid].push(item);
-      res();
-    };r.readAsDataURL(f);});
+    const dataUrl=await new Promise(res=>{r.onload=ev=>res(ev.target.result);r.readAsDataURL(f);});
+    const item={data:dataUrl,type:f.type,name:f.name,driveUrl:"",driveId:""};
+    if(which==="after")s.afterPhotos[zid].push(item);
+    else s.photos[zid].push(item);
+    safeLocalSave();editSubmission(); // show it right away using the local copy while the upload runs
+    if(folderId){
+      const ok=await uploadItemToDriveFolder(item,folderId);
+      if(ok)item.data=""; // safely on Drive now — drop the local copy so it doesn't bloat storage
+    }
   }
   safeLocalSave();
+  syncSubmissionToSheet(s);
   editSubmission();
-  showToast("Photos added");
+  showToast(folderId?"Photos added and uploaded":"Photos added — but couldn't reach Drive, saved on this device only");
 }
 function editDeleteAfterPhoto(zid,pi){
   if(currentSubIdx===null)return;
@@ -2136,6 +2246,9 @@ function saveSubEdit(){
   // Ensure all zoneData values in SUBMISSIONS are objects before saving
   SUBMISSIONS.forEach(sub=>{if(typeof sub.zoneData==="string"){try{sub.zoneData=JSON.parse(sub.zoneData);}catch(e){sub.zoneData={}; }}});
   safeLocalSave();
+  // This used to stop here — saving only to this browser's own storage,
+  // never to the shared Sheet. Every past edit only ever existed locally.
+  syncSubmissionToSheet(s);
   showToast("Report updated!");
   cancelSubEdit();
   viewSubmission(currentSubIdx);
