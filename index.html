@@ -831,6 +831,29 @@ Text: ${el.value.trim()}`;
   if(btn){btn.disabled=false;btn.innerHTML="&#129668; Clean up";}
 }
 // ── END AI ASSIST ──────────────────────────────────────
+// Firing every upload the instant a photo is added meant that a report
+// with many photos (or several zones' worth added quickly) could send a
+// dozen simultaneous requests at Apps Script all at once. Google's own
+// backend genuinely struggles to keep up with that much concurrent load,
+// which meant every single one could time out together — not a partial
+// failure, all of them at once. This queue caps how many uploads are ever
+// actually in flight at the same time, so each one gets a fair shot at
+// actually completing instead of competing with a dozen others.
+let _uploadQueue=[];
+let _uploadActiveCount=0;
+const MAX_CONCURRENT_UPLOADS=2;
+function queueUpload(item,zid){
+  _uploadQueue.push({item,zid});
+  processUploadQueue();
+}
+async function processUploadQueue(){
+  if(_uploadActiveCount>=MAX_CONCURRENT_UPLOADS)return;
+  const next=_uploadQueue.shift();
+  if(!next)return;
+  _uploadActiveCount++;
+  try{await uploadToDrive(next.item,next.zid);}
+  finally{_uploadActiveCount--;processUploadQueue();}
+}
 async function handlePhotos(e,zid){
   const files=Array.from(e.target.files);
   if(!files.length)return;
@@ -850,8 +873,8 @@ async function handlePhotos(e,zid){
       if(progFill)progFill.style.width=(done/files.length*100)+"%";
       res();
     };r.readAsDataURL(f);});
-    // Upload to Drive in background
-    uploadToDrive(S.photos[zid][S.photos[zid].length-1],zid);
+    // Upload to Drive in background, via the concurrency-limited queue
+    queueUpload(S.photos[zid][S.photos[zid].length-1],zid);
   }
   setTimeout(()=>{if(prog)prog.style.display="none";},1000);
 }
@@ -876,7 +899,7 @@ async function handleAfterPhotos(e,zid){
       const item={data:ev.target.result,type:f.type,name:uniqueName,driveUrl:"",driveId:""};
       S.afterPhotos[zid].push(item);renderAfterGrid(zid);res();
     };r.readAsDataURL(f);});
-    uploadToDrive(S.afterPhotos[zid][S.afterPhotos[zid].length-1],zid);
+    queueUpload(S.afterPhotos[zid][S.afterPhotos[zid].length-1],zid);
   }
 }
 async function compressImage(dataUrl,maxKB){
