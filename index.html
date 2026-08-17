@@ -2413,27 +2413,27 @@ function downloadSubPDF(idx){
       // able to silently disappear because a zone-type rule didn't
       // anticipate it.
       const answeredKeys=Object.keys(z).filter(k=>checkLabels[k]&&(z[k]==="Yes"||z[k]==="No"));
-      const keysToRender=Array.from(new Set([...(applicableKeys.length>0?applicableKeys:Object.keys(checkLabels)),...answeredKeys])).filter(k=>!excludedForZone.includes(k));
+      const keysToRender=Array.from(new Set([...(applicableKeys.length>0?applicableKeys:Object.keys(checkLabels)),...answeredKeys])).filter(k=>!excludedForZone.includes(k)&&(z[k]==="Yes"||z[k]==="No"));
+      if(keysToRender.length){
       checksSection+=`<div style="margin-bottom:20px"><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#6b6f8a;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #eee">Service Checks</div>`;
       checksSection+=`<table style="width:100%;border-collapse:collapse">`;
       keysToRender.forEach(k=>{
         const label=(zoneData&&zoneData.checkLabels&&zoneData.checkLabels[k])||checkLabels[k]||customLabelMap[k];if(!label)return;
-        const val=z[k]||"";
-        const recorded=val==="Yes"||val==="No";
+        const val=z[k];
         // Same polarity list as the live form — for these specific
         // questions, "No" is the good answer (e.g. no cracks found),
         // so the good/bad colour has to follow the answer's meaning,
         // not just whether it literally says "Yes".
         const polarityOverride=zoneData&&zoneData.checkPolarity&&zoneData.checkPolarity[k];
         const inverted=polarityOverride?polarityOverride==="noGood":["cracks","ventBlocked","dirtyCorners","hotItems","dustInternal","deadPixels"].includes(k);
-        const isGood=recorded&&(inverted?val==="No":val==="Yes");
-        const bg=recorded?(isGood?"#e6f7ef":"#ffebee"):"#f4f4f8";
-        const col=recorded?(isGood?"#00a550":"#cc2233"):"#aaa";
-        const icon=recorded?(isGood?"✓":"✗"):"—";
-        const display=recorded?val:"Not recorded";
-        checksSection+=`<tr><td style="padding:7px 10px;border-bottom:1px solid #f4f4f8;font-size:12px;color:#333;width:85%">${label}</td><td style="padding:7px 10px;border-bottom:1px solid #f4f4f8;text-align:right"><span style="background:${bg};color:${col};font-weight:700;font-size:11px;padding:3px 10px;border-radius:20px">${icon} ${display}</span></td></tr>`;
+        const isGood=inverted?val==="No":val==="Yes";
+        const bg=isGood?"#e6f7ef":"#ffebee";
+        const col=isGood?"#00a550":"#cc2233";
+        const icon=isGood?"✓":"✗";
+        checksSection+=`<tr><td style="padding:7px 10px;border-bottom:1px solid #f4f4f8;font-size:12px;color:#333;width:85%">${label}</td><td style="padding:7px 10px;border-bottom:1px solid #f4f4f8;text-align:right"><span style="background:${bg};color:${col};font-weight:700;font-size:11px;padding:3px 10px;border-radius:20px">${icon} ${val}</span></td></tr>`;
       });
       checksSection+=`</table></div>`;
+      }
 
 
       
