@@ -2310,6 +2310,24 @@ function downloadSubPDF(idx){
   const ynBg=(v,k)=>ynGood(v,k)?"#e6f7ef":"#ffebee";
   const ynCol=(v,k)=>ynGood(v,k)?"#00a550":"#cc2233";
   const ynIcon=(v,k)=>ynGood(v,k)?"✓":"✗";
+  const ALL_CHECK_KEYS_LIST=["touchOk","cameraOk","cracks","fixings","ventBlocked","dirtyCorners","hotItems","cablesOk","dustInternal","soundOk","volumeOk","lightOk","projOn","motionOk","soundCalib","equipClean","airflow","noClutter","signalOk","deadPixels","colourOk","soundCalib2","animalsWorking","animalsPresent","otherOk"];
+  // A zone counts as reportable if it was explicitly marked complete in
+  // the field form, OR it simply has real recorded data — a condition, a
+  // note, an answered check, or photos. "Mark Zone Complete" is a
+  // field-workflow button; zones filled in or corrected through Edit
+  // Report never touch that flag, so relying on it alone was silently
+  // dropping whole zones from the PDF that had genuine recorded data.
+  const zoneHasRealData=(zid,z)=>{
+    if(!z)return false;
+    if(z.completed)return true;
+    if(z.condition)return true;
+    if(z.condNote&&String(z.condNote).trim())return true;
+    if(z.summary&&String(z.summary).trim())return true;
+    if(ALL_CHECK_KEYS_LIST.some(k=>z[k]==="Yes"||z[k]==="No"))return true;
+    if(s.photos&&s.photos[zid]&&s.photos[zid].length)return true;
+    if(s.afterPhotos&&s.afterPhotos[zid]&&s.afterPhotos[zid].length)return true;
+    return false;
+  };
 
   let zonesHtml="";
   // Deep-clone submission so we never mutate the live SUBMISSIONS array
@@ -2349,7 +2367,7 @@ function downloadSubPDF(idx){
   }
   if(s.zoneData&&Object.keys(s.zoneData).length){
     Object.entries(s.zoneData).forEach(([zid,z])=>{
-      if(!z.completed)return; // Zone was never marked complete — leave it out of the report entirely
+      if(!zoneHasRealData(zid,z))return; // Genuinely empty zone (no data at all) — leave out of the report
       const znum=zid.replace("z","");
       const zoneData=clientResolved?.zones?.find(z2=>z2.id===zid)||clientResolved?.zones?.[parseInt(znum)-1];
       const zoneName=zoneData?.name||"Zone "+znum;
@@ -2580,10 +2598,10 @@ const win=window.open("","_blank");
     ${s.overallNotes?`<div style="background:#f0f8ff;border-left:4px solid #1a1aff;border-radius:0 8px 8px 0;padding:14px 18px;margin-bottom:24px"><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#1a1aff;margin-bottom:5px">Overall Notes</div><div style="font-size:13px;color:#333;line-height:1.5">${s.overallNotes}</div></div>`:""}
 
     ${(()=>{
-      // Only count zones actually marked complete — matches what's shown
-      // in the zone-by-zone section below. Without this, the summary
-      // numbers could claim more zones than the report actually displays.
-      const completedZoneData=s.zoneData?Object.fromEntries(Object.entries(s.zoneData).filter(([,z])=>z.completed)):{};
+      // Only count zones actually shown in the report below — matches the
+      // same real-data rule used there, not just the "Mark Zone Complete"
+      // flag, which zones backfilled through Edit Report never set.
+      const completedZoneData=s.zoneData?Object.fromEntries(Object.entries(s.zoneData).filter(([zid,z])=>zoneHasRealData(zid,z))):{};
       const totalZones=Object.keys(completedZoneData).length;
       const siteZoneCount=((CLIENTS[s.clientSlug]||{}).zones||[]).length||totalZones;
       const goodZones=Object.values(completedZoneData).filter(z=>z.condition==="Good").length;
