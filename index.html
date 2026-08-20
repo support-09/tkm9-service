@@ -1375,60 +1375,17 @@ function renderZoneEditor(){
     if(z.isProjection)previewChecksRaw.push(["projOn","Projection on and aligned/mapped to canvas?","Projection"],["motionOk","All 3 motion detection sensors working and calibrated?","Projection"],["soundCalib","Sound working and calibrated as intended?","Projection"],["equipClean","Equipment clean and clear of dust and debris?","Projection"]);
     const activeChecksRaw=previewChecksRaw.filter(([key])=>!z.excludedChecks.includes(key));
     z.customChecks=z.customChecks||[];
-    const sectionsInOrderForPreview=[...new Set(activeChecksRaw.map(([,,section])=>section).filter(Boolean))];
-    let previewChecks=[];
-    sectionsInOrderForPreview.forEach(section=>{
-      activeChecksRaw.filter(([,,s])=>s===section).forEach(([key,def])=>{
-        previewChecks.push({key,text:cl[key]||def,isCustom:!!cl[key],section});
-      });
-      z.customChecks.filter(c=>c.section===section&&c.text&&c.text.trim()).forEach(c=>{
-        previewChecks.push({key:c.key,text:c.text,isCustom:false,section});
-      });
-    });
-    z.customChecks.filter(c=>(!c.section||!sectionsInOrderForPreview.includes(c.section))&&c.text&&c.text.trim()).forEach(c=>{
-      previewChecks.push({key:c.key,text:c.text,isCustom:false,section:"Other Questions"});
-    });
+    // These three warn about a real misconfiguration (equipment ticked on
+    // but no items listed for it, so no checks will actually show for the
+    // technician) — kept even though the full preview mirror below it was
+    // removed, since this is the only place that catches this mistake.
     const soundGap=z.hasSound&&(!z.soundItems||!z.soundItems.length);
     const lightGap=z.hasLight&&(!z.lightItems||!z.lightItems.length);
     const otherGap=z.hasOther&&(!z.otherItems||!z.otherItems.length);
-    // Full read-only mirror of the actual technician form for this zone —
-    // same section headers, same CSS classes, same question wording as
-    // the real thing. Deliberately NOT interactive: the real form's Yes/No
-    // buttons and text fields are wired to update a report someone is
-    // actively filling in (a completely different piece of data to the
-    // template being edited here) — making this preview clickable would
-    // risk quietly corrupting that unrelated data instead of the template.
-    // Editing stays through the fields already in this screen; this just
-    // shows accurately what those fields actually produce.
-    const validScope=(z.scope||[]).filter(s=>s&&s.trim());
-    const previewYN=(c)=>`<div class="yw"><div class="yq">${c.text}${c.isCustom?' <span style="font-size:10px;color:#1a1aff;font-weight:700">(edited)</span>':""}</div><div class="yr"><button class="yb" disabled style="opacity:.55;cursor:default">Yes</button><button class="yb" disabled style="opacity:.55;cursor:default">No</button></div></div>`;
-    let previewInner="";
-    if((z.photos&&z.photos.length)||z.floorplan){
-      previewInner+='<div class="sh" style="margin-top:0">Reference</div>';
-      if(z.photos&&z.photos.length){
-        const cls=z.photos.length===1?"single":"multi";
-        previewInner+=`<div class="zmedia-photos ${cls}">${z.photos.map(p=>`<img src="${p}" alt="">`).join("")}</div>`;
-      }
-      if(z.floorplan)previewInner+=`<div class="zmedia-label">Location within centre</div><img class="zmedia-fp" src="${z.floorplan}" alt="Floor plan">`;
-    }
-    if(validScope.length){previewInner+='<div class="sh">Scope of Work</div><ul class="scope-list">';validScope.forEach(s=>{previewInner+=`<li><div class="sbullet"></div><span>${s}</span></li>`;});previewInner+="</ul>";}
-    else{previewInner+='<div class="sh">Scope of Work</div><div style="font-size:12px;color:#999;padding:6px 0">No scope items added yet.</div>';}
-    previewInner+='<div class="coa-banner">&#9679; Condition on Arrival</div><div style="font-size:12px;color:#888;padding:2px 0 10px">Good / Medium / Poor + comments — technician fills this in on the day</div>';
-    previewInner+='<div class="svc-banner">&#9874; Service Checks</div>';
-    previewInner+=(()=>{
-      if(!previewChecks.length)return '<div style="font-size:12px;color:#999;padding:6px 0">No checks yet — tick an Equipment box below to add some.</div>';
-      let out="",lastSection=null;
-      previewChecks.forEach(c=>{
-        if(c.section&&c.section!==lastSection){out+=`<div class="sh">${esc(c.section)}</div>`;lastSection=c.section;}
-        out+=previewYN(c);
-      });
-      return out;
-    })();
-    if(soundGap)previewInner+='<div style="font-size:11px;color:#d97000;margin-top:8px">&#9888; Sound is ticked but Sound Items is empty — no sound checks will show until you add at least one item.</div>';
-    if(lightGap)previewInner+='<div style="font-size:11px;color:#d97000;margin-top:8px">&#9888; Lighting is ticked but Light Items is empty — no lighting checks will show until you add at least one item.</div>';
-    if(otherGap)previewInner+='<div style="font-size:11px;color:#d97000;margin-top:8px">&#9888; Other is ticked but Other Items is empty — no other checks will show until you add at least one item.</div>';
-    previewInner+='<div class="sh">Zone Summary</div><div style="font-size:12px;color:#888;padding:6px 0 0">Free-text field — technician fills this in on the day</div>';
-    const previewBox=`<div style="margin-top:16px"><div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#1a1aff;margin-bottom:8px">Full preview — exactly what the technician will see</div><div style="background:#fff;border:1.5px solid #c8d4ff;border-radius:10px;padding:16px">${previewInner}</div></div>`;
+    let warningsHtml="";
+    if(soundGap)warningsHtml+='<div style="font-size:11px;color:#d97000;margin-top:8px">&#9888; Sound is ticked but Sound Items is empty — no sound checks will show until you add at least one item.</div>';
+    if(lightGap)warningsHtml+='<div style="font-size:11px;color:#d97000;margin-top:8px">&#9888; Lighting is ticked but Light Items is empty — no lighting checks will show until you add at least one item.</div>';
+    if(otherGap)warningsHtml+='<div style="font-size:11px;color:#d97000;margin-top:8px">&#9888; Other is ticked but Other Items is empty — no other checks will show until you add at least one item.</div>';
     // Real, editable wording for each check currently applicable to this
     // zone. Typing here saves into z.checkLabels[key] — the same override
     // the live form and PDF both read from. Leaving a box blank (or
@@ -1459,7 +1416,7 @@ function renderZoneEditor(){
     const generalCustomBox=`<div style="margin-top:14px"><div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#1a1aff;margin-bottom:8px">Other questions <span style="font-weight:400;text-transform:none;color:#888">(not tied to a specific section)</span></div><div style="background:#fafaff;border:1px solid #dde0ec;border-radius:10px;padding:14px">${unsectionedCustom.map(({c,ci})=>customRow(c,ci)).join("")}<button onclick="adminZones[${i}].customChecks=adminZones[${i}].customChecks||[];adminZones[${i}].customChecks.push({key:'custom_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),text:''});renderZoneEditor()" style="font-size:12px;color:var(--blue);background:none;border:1.5px dashed var(--blue);border-radius:6px;padding:8px 14px;cursor:pointer;width:100%;font-weight:700">+ Add general question</button></div></div>`;
     const editChecksBox=activeChecksRaw.length?`<div style="margin-top:14px"><div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#1a1aff;margin-bottom:8px">Edit question wording <span style="font-weight:400;text-transform:none;color:#888">— grouped the same way the technician sees them</span></div><div style="background:#fafaff;border:1px solid #dde0ec;border-radius:10px;padding:14px">${groupBySection(activeChecksRaw)}${excludedRaw.length?`<div style="margin-top:6px;padding-top:10px;border-top:1px solid #dde0ec"><div style="font-size:10px;font-weight:700;color:#888;margin-bottom:6px">DELETED FOR THIS ZONE</div>${excludedRaw.map(([key,def])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px;color:#999"><span style="text-decoration:line-through">${esc(def)}</span><button onclick="adminZones[${i}].excludedChecks=(adminZones[${i}].excludedChecks||[]).filter(k=>k!=='${key}');renderZoneEditor()" style="font-size:11px;color:var(--blue);background:none;border:none;cursor:pointer;text-decoration:underline">Restore</button></div>`).join("")}</div>`:""}</div></div>`:(excludedRaw.length?`<div style="margin-top:14px"><div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#1a1aff;margin-bottom:8px">Deleted for this zone</div><div style="background:#fafaff;border:1px solid #dde0ec;border-radius:10px;padding:14px">${excludedRaw.map(([key,def])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px;color:#999"><span style="text-decoration:line-through">${esc(def)}</span><button onclick="adminZones[${i}].excludedChecks=(adminZones[${i}].excludedChecks||[]).filter(k=>k!=='${key}');renderZoneEditor()" style="font-size:11px;color:var(--blue);background:none;border:none;cursor:pointer;text-decoration:underline">Restore</button></div>`).join("")}</div></div>`:"");
 
-    return `<div class="ze"><button class="zrmbtn" onclick="rmZone(${i})">Remove</button><button class="zrmbtn" style="right:80px;color:var(--blue);border-color:var(--blue)" onclick="duplicateZone(${i})">Duplicate</button><h4>Zone ${i+1}</h4><div class="field"><label>Zone Name</label><input type="text" value="${esc(z.name)}" oninput="adminZones[${i}].name=this.value"></div><div class="field"><label>Reference Photos <span style="font-size:10px;color:var(--grn);font-weight:400;text-transform:none">&#9679; Uploads to Google Drive automatically — double-checked again when you hit Save</span></label><div class="zpuarea"><input type="file" accept="image/*" multiple onchange="handleAdminPhoto(event,${i})"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-0.125em"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg> Upload zone photos</div>${thumbs?'<div class="zphumb">'+thumbs+"</div>":""}</div><div class="field"><label>Floor Plan / Location Map</label><div class="zpuarea"><input type="file" accept="image/*" onchange="handleAdminFP(event,${i})"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-0.125em"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg> Upload floor plan</div>${fpSrc?`<div style="position:relative;display:inline-block;margin-top:6px"><img src="${fpSrc}" style="width:100%;max-height:70px;object-fit:contain;border-radius:6px"><div style="position:absolute;bottom:2px;left:2px;background:${fpIsDrive?"#0a0":"#c80"};color:#fff;font-size:8px;padding:1px 4px;border-radius:3px;font-weight:700">${fpIsDrive?"DRIVE":"LOCAL"}</div></div><br><button onclick="adminZones[${i}].floorplan='';renderZoneEditor()" style="font-size:11px;color:var(--red);background:none;border:none;cursor:pointer;margin-top:4px">Remove</button>`:""}</div><div class="field"><label>Scope Items</label><select onchange="applyZoneTemplate(${i},this.value);this.value=''" style="margin-bottom:8px"><option value="">Start from a template...</option>${templateOptions}</select>${scopeInputs}<button class="addsi" onclick="addScope(${i})">+ Add</button></div><div class="field"><label>Equipment</label><div class="cbrow"><label><input type="checkbox" ${z.hasScreens?"checked":""} onchange="adminZones[${i}].hasScreens=this.checked;renderZoneEditor()"> Screens</label><label><input type="checkbox" ${z.hasSound?"checked":""} onchange="adminZones[${i}].hasSound=this.checked;renderZoneEditor()"> Sound</label><label><input type="checkbox" ${z.hasLight?"checked":""} onchange="adminZones[${i}].hasLight=this.checked;renderZoneEditor()"> Lighting</label><label><input type="checkbox" ${z.hasOther?"checked":""} onchange="adminZones[${i}].hasOther=this.checked;renderZoneEditor()"> Other</label></div><div class="cbrow" style="margin-top:6px"><label><input type="checkbox" ${z.isProjection?"checked":""} onchange="adminZones[${i}].isProjection=this.checked;renderZoneEditor()"> Projection</label></div>${previewBox}${editChecksBox}${generalCustomBox}</div><div class="field"><label>Sound Items</label><input type="text" value="${(z.soundItems||[]).join(", ")}" oninput="adminZones[${i}].soundItems=this.value.split(',').map(s=>s.trim()).filter(Boolean)" onchange="renderZoneEditor()"></div><div class="field"><label>Light Items</label><input type="text" value="${(z.lightItems||[]).join(", ")}" oninput="adminZones[${i}].lightItems=this.value.split(',').map(s=>s.trim()).filter(Boolean)" onchange="renderZoneEditor()"></div><div class="field"><label>Other Items</label><input type="text" value="${(z.otherItems||[]).join(", ")}" oninput="adminZones[${i}].otherItems=this.value.split(',').map(s=>s.trim()).filter(Boolean)" onchange="renderZoneEditor()"></div></div>`;
+    return `<div class="ze"><button class="zrmbtn" onclick="rmZone(${i})">Remove</button><button class="zrmbtn" style="right:80px;color:var(--blue);border-color:var(--blue)" onclick="duplicateZone(${i})">Duplicate</button><h4>Zone ${i+1}</h4><div class="field"><label>Zone Name</label><input type="text" value="${esc(z.name)}" oninput="adminZones[${i}].name=this.value"></div><div class="field"><label>Reference Photos <span style="font-size:10px;color:var(--grn);font-weight:400;text-transform:none">&#9679; Uploads to Google Drive automatically — double-checked again when you hit Save</span></label><div class="zpuarea"><input type="file" accept="image/*" multiple onchange="handleAdminPhoto(event,${i})"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-0.125em"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg> Upload zone photos</div>${thumbs?'<div class="zphumb">'+thumbs+"</div>":""}</div><div class="field"><label>Floor Plan / Location Map</label><div class="zpuarea"><input type="file" accept="image/*" onchange="handleAdminFP(event,${i})"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-0.125em"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg> Upload floor plan</div>${fpSrc?`<div style="position:relative;display:inline-block;margin-top:6px"><img src="${fpSrc}" style="width:100%;max-height:70px;object-fit:contain;border-radius:6px"><div style="position:absolute;bottom:2px;left:2px;background:${fpIsDrive?"#0a0":"#c80"};color:#fff;font-size:8px;padding:1px 4px;border-radius:3px;font-weight:700">${fpIsDrive?"DRIVE":"LOCAL"}</div></div><br><button onclick="adminZones[${i}].floorplan='';renderZoneEditor()" style="font-size:11px;color:var(--red);background:none;border:none;cursor:pointer;margin-top:4px">Remove</button>`:""}</div><div class="field"><label>Scope Items</label><select onchange="applyZoneTemplate(${i},this.value);this.value=''" style="margin-bottom:8px"><option value="">Start from a template...</option>${templateOptions}</select>${scopeInputs}<button class="addsi" onclick="addScope(${i})">+ Add</button></div><div class="field"><label>Equipment</label><div class="cbrow"><label><input type="checkbox" ${z.hasScreens?"checked":""} onchange="adminZones[${i}].hasScreens=this.checked;renderZoneEditor()"> Screens</label><label><input type="checkbox" ${z.hasSound?"checked":""} onchange="adminZones[${i}].hasSound=this.checked;renderZoneEditor()"> Sound</label><label><input type="checkbox" ${z.hasLight?"checked":""} onchange="adminZones[${i}].hasLight=this.checked;renderZoneEditor()"> Lighting</label><label><input type="checkbox" ${z.hasOther?"checked":""} onchange="adminZones[${i}].hasOther=this.checked;renderZoneEditor()"> Other</label></div><div class="cbrow" style="margin-top:6px"><label><input type="checkbox" ${z.isProjection?"checked":""} onchange="adminZones[${i}].isProjection=this.checked;renderZoneEditor()"> Projection</label></div>${warningsHtml}${editChecksBox}${generalCustomBox}</div><div class="field"><label>Sound Items</label><input type="text" value="${(z.soundItems||[]).join(", ")}" oninput="adminZones[${i}].soundItems=this.value.split(',').map(s=>s.trim()).filter(Boolean)" onchange="renderZoneEditor()"></div><div class="field"><label>Light Items</label><input type="text" value="${(z.lightItems||[]).join(", ")}" oninput="adminZones[${i}].lightItems=this.value.split(',').map(s=>s.trim()).filter(Boolean)" onchange="renderZoneEditor()"></div><div class="field"><label>Other Items</label><input type="text" value="${(z.otherItems||[]).join(", ")}" oninput="adminZones[${i}].otherItems=this.value.split(',').map(s=>s.trim()).filter(Boolean)" onchange="renderZoneEditor()"></div></div>`;
   }).join("")+datalistHtml;
 }
 let _zoneRefFolderId=null;
@@ -1860,7 +1817,13 @@ function renderSubmissionsList(){
   const el=document.getElementById("submissions-list");
   if(!SUBMISSIONS.length){el.innerHTML='<div style="color:var(--mut);font-size:14px;padding:12px 0">No submissions found.</div>';return;}
   const tagMap={"Q1: JAN-MAR":"tq1","Q2: APR-JUN":"tq2","Q3: JUL-SEP":"tq3","Q4: OCT-DEC":"tq4","CALLOUT":"tco"};
-  const source=_filteredSubs!==null?_filteredSubs:SUBMISSIONS;
+  const source=(_filteredSubs!==null?_filteredSubs:SUBMISSIONS).slice().sort((a,b)=>{
+    // Most recent first. Falls back to 0 (oldest) for any submission with
+    // a missing/invalid timestamp, so a bad date can't jump to the top.
+    const ta=new Date(a.timestamp).getTime();
+    const tb=new Date(b.timestamp).getTime();
+    return(isNaN(tb)?0:tb)-(isNaN(ta)?0:ta);
+  });
   const visible=source.slice(0,_subsShowing);
   const rows=visible.map((s,i)=>{
     const d=new Date(s.timestamp);
@@ -2080,6 +2043,16 @@ function editDeletePhoto(zid,pi){
   safeLocalSave();
   editSubmission();
 }
+// Recolours a Service Check dropdown in Edit Report to match the same
+// green/red used on the View screen and PDF — including problem-style
+// questions (cracks, debris, etc.) where "No" is the good answer.
+function editColourCheckSelect(sel){
+  const inverted=sel.dataset.inverted==="1";
+  const val=sel.value;
+  if(val===""){sel.style.cssText="padding:8px 10px;font-size:13px";return;}
+  const good=inverted?val==="No":val==="Yes";
+  sel.style.cssText=`padding:8px 10px;font-size:13px;font-weight:700;color:${good?"#00a550":"#cc2233"};background:${good?"#e6f7ef":"#ffebee"};border-color:${good?"#00a550":"#cc2233"}`;
+}
 async function editAddPhotos(e,zid,which){
   const files=Array.from(e.target.files);if(!files.length)return;
   const s=SUBMISSIONS[currentSubIdx];
@@ -2177,7 +2150,12 @@ function editSubmission(){
       keysToShow.forEach(k=>{checksToShow[k]=(zoneData2&&zoneData2.checkLabels&&zoneData2.checkLabels[k])||defaultCheckLabels[k];});
       if(zoneData2&&zoneData2.customChecks){zoneData2.customChecks.forEach(c=>{if(c.text&&c.text.trim())checksToShow[c.key]=c.text;});}
       Object.entries(checksToShow).forEach(([k,label])=>{
-        html+=`<div class="field" style="margin-bottom:4px"><label style="text-transform:none;letter-spacing:0;font-size:12px">${label}</label><select id="edit-check-${zid}-${k}" style="padding:8px 10px;font-size:13px"><option value="">Not recorded</option><option value="Yes" ${z[k]==="Yes"?"selected":""}><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-0.125em"><path d="M20 6 9 17l-5-5"/></svg> Yes</option><option value="No" ${z[k]==="No"?"selected":""}><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-0.125em"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg> No</option></select></div>`;
+        const polarityOverride=zoneData2&&zoneData2.checkPolarity&&zoneData2.checkPolarity[k];
+        const inverted=polarityOverride?polarityOverride==="noGood":INVERTED_CHECKS.has(k);
+        const curVal=z[k]||"";
+        const curGood=curVal?(inverted?curVal==="No":curVal==="Yes"):null;
+        const selStyle=curVal===""?"padding:8px 10px;font-size:13px":`padding:8px 10px;font-size:13px;font-weight:700;color:${curGood?"#00a550":"#cc2233"};background:${curGood?"#e6f7ef":"#ffebee"};border-color:${curGood?"#00a550":"#cc2233"}`;
+        html+=`<div class="field" style="margin-bottom:4px"><label style="text-transform:none;letter-spacing:0;font-size:12px">${label}</label><select id="edit-check-${zid}-${k}" data-inverted="${inverted?"1":"0"}" style="${selStyle}" onchange="editColourCheckSelect(this)"><option value="">Not recorded</option><option value="Yes" ${z[k]==="Yes"?"selected":""}><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-0.125em"><path d="M20 6 9 17l-5-5"/></svg> Yes</option><option value="No" ${z[k]==="No"?"selected":""}><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-0.125em"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg> No</option></select></div>`;
       });
       html+='</div>';
       html+=`<div class="field"><label>Zone Summary <button id="ai-edit-sum-btn-${zid}" onclick="aiZoneSummaryEdit('${zid}','${esc(zoneName)}')" class="ai-btn" style="float:right">&#129668; Generate summary</button></label><textarea id="edit-zoneNote-${zid}">${esc(z.zoneNote||'')}</textarea></div>`;
