@@ -226,8 +226,10 @@ textarea{resize:vertical;min-height:78px}
       <button class="stb" data-val="Q3: JUL-SEP">Q3 &middot; Jul&ndash;Sep</button>
       <button class="stb" data-val="Q4: OCT-DEC">Q4 &middot; Oct&ndash;Dec</button>
     </div>
-    <div style="margin:8px 0 0;text-align:center;font-size:11px;color:var(--mut);font-weight:600;letter-spacing:.05em">+ OPTIONALLY ADD</div>
-    <div style="margin-top:8px"><button class="stb callout" data-val="CALLOUT" style="width:100%"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="currentColor" style="display:inline-block;vertical-align:-0.125em"><path d="M13 2 3 14h7l-1 8 11-14h-7l1-6z"/></svg> Callout / Ad-hoc</button></div>
+    <div id="callout-toggle-wrap">
+      <div style="margin:8px 0 0;text-align:center;font-size:11px;color:var(--mut);font-weight:600;letter-spacing:.05em">+ OPTIONALLY ADD</div>
+      <div style="margin-top:8px"><button class="stb callout" data-val="CALLOUT" style="width:100%"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="currentColor" style="display:inline-block;vertical-align:-0.125em"><path d="M13 2 3 14h7l-1 8 11-14h-7l1-6z"/></svg> Callout / Ad-hoc</button></div>
+    </div>
     <div class="cex" id="callout-extra">
       <div class="field" style="margin-top:12px"><label>Callout Reason <button id="ai-clean-btn-callout" onclick="aiCleanField('callout-reason','ai-clean-btn-callout')" class="ai-btn" style="float:right;display:none">&#129668; Clean up</button></label><input type="text" id="callout-reason" placeholder="e.g. Screen unresponsive, unit offline&hellip;"></div>
       <div class="field"><label>Reported By</label><input type="text" id="callout-reporter" placeholder="e.g. Client / TKM9 Service Desk"></div>
@@ -510,6 +512,19 @@ function initApp(){
   document.getElementById("banner-1").innerHTML=b;
   document.getElementById("banner-2").innerHTML=b;
   document.getElementById("service-date").value=new Date().toISOString().split("T")[0];
+  // Build the Service Type buttons for whichever mode this client uses —
+  // quarterly with an optional Callout (the default, unchanged for every
+  // existing client), or a plain set of months with no Callout at all.
+  const stConfig=getServiceTypeOptions(S.client);
+  const monthLabels={"JAN":"Jan","FEB":"Feb","MAR":"Mar","APR":"Apr","MAY":"May","JUN":"Jun","JUL":"Jul","AUG":"Aug","SEP":"Sep","OCT":"Oct","NOV":"Nov","DEC":"Dec"};
+  const quarterLabels={"Q1: JAN-MAR":"Q1 &middot; Jan&ndash;Mar","Q2: APR-JUN":"Q2 &middot; Apr&ndash;Jun","Q3: JUL-SEP":"Q3 &middot; Jul&ndash;Sep","Q4: OCT-DEC":"Q4 &middot; Oct&ndash;Dec"};
+  const stGroup=document.querySelector(".sg");
+  if(stConfig.hasCallout){
+    stGroup.innerHTML=stConfig.allTypes.filter(t=>t!=="CALLOUT").map(t=>`<button class="stb" data-val="${t}">${quarterLabels[t]||t}</button>`).join("");
+  } else {
+    stGroup.innerHTML=stConfig.allTypes.map(t=>`<button class="stb" data-val="${t}">${monthLabels[t]||t}</button>`).join("");
+  }
+  document.getElementById("callout-toggle-wrap").style.display=stConfig.hasCallout?"":"none";
   document.querySelectorAll(".stb").forEach(btn=>{
     btn.addEventListener("click",()=>{
       const val=btn.dataset.val,isQ=val!=="CALLOUT";
@@ -574,7 +589,12 @@ function mkZBody(z){
   if(z.isSpecial){h+='<div class="sh">LED Screen</div>';h+=ynZ(z,"deadPixels","Any damaged pixels on LED panels?");h+=ynZ(z,"colourOk","Colour and calibration correct?");h+=ynZ(z,"soundCalib2","Sound calibration correct?");h+=customFor(z,"LED Screen");h+='<div class="sh">Animal Tray</div>';h+=ynZ(z,"animalsWorking","All animals working with screen?");h+=ynZ(z,"animalsPresent","All animals (Qty: 5) present in tray?");h+=customFor(z,"Animal Tray");}
   if(z.isServerRoom){h+=ynZ(z,"airflow","Airflow and heat OK for all equipment?");h+=ynZ(z,"noClutter","Room clear of clutter?");h+=ynZ(z,"signalOk","Signal strength as intended?");h+=customFor(z,"Server Room");}
   if(z.hasScreens){h+='<div class="sh">Screen Checks</div>';h+=ynZ(z,"touchOk","Touch working on ALL areas of the game?");h+=ynZ(z,"cameraOk","Camera securely in place (if visible)?");h+=customFor(z,"Screen Checks");}
-  if(!z.isServerRoom&&!z.isProjection){h+='<div class="sh">External — Safety &amp; Quality</div>';h+=ynZ(z,"cracks","Any visual cracks or damage?");h+=ynZ(z,"fixings","All fixings secure?");h+=ynZ(z,"ventBlocked","Any debris blocking ventilation holes?");h+=ynZ(z,"dirtyCorners","Any build-up or dirt in corners of screens?");h+=customFor(z,"External — Safety & Quality");h+='<div class="sh">Internal — Technical</div>';h+=ynZ(z,"hotItems","Any electrical items hot to touch? (LEDs, Media Players, Routers, Screens, Cabling)");h+=ynZ(z,"cablesOk","All cables securely in place?");h+=ynZ(z,"dustInternal","Dust or debris build-up internally?");h+=customFor(z,"Internal — Technical");}
+  if(!z.isServerRoom&&!z.isProjection){
+    const extContent=(!z.excludedChecks||!z.excludedChecks.includes("cracks"))||(!z.excludedChecks||!z.excludedChecks.includes("fixings"))||(!z.excludedChecks||!z.excludedChecks.includes("ventBlocked"))||(!z.excludedChecks||!z.excludedChecks.includes("dirtyCorners"))||customFor(z,"External — Safety & Quality");
+    if(extContent){h+='<div class="sh">External — Safety &amp; Quality</div>';h+=ynZ(z,"cracks","Any visual cracks or damage?");h+=ynZ(z,"fixings","All fixings secure?");h+=ynZ(z,"ventBlocked","Any debris blocking ventilation holes?");h+=ynZ(z,"dirtyCorners","Any build-up or dirt in corners of screens?");h+=customFor(z,"External — Safety & Quality");}
+    const intContent=(!z.excludedChecks||!z.excludedChecks.includes("hotItems"))||(!z.excludedChecks||!z.excludedChecks.includes("cablesOk"))||(!z.excludedChecks||!z.excludedChecks.includes("dustInternal"))||customFor(z,"Internal — Technical");
+    if(intContent){h+='<div class="sh">Internal — Technical</div>';h+=ynZ(z,"hotItems","Any electrical items hot to touch? (LEDs, Media Players, Routers, Screens, Cabling)");h+=ynZ(z,"cablesOk","All cables securely in place?");h+=ynZ(z,"dustInternal","Dust or debris build-up internally?");h+=customFor(z,"Internal — Technical");}
+  }
   if(z.hasSound&&z.soundItems&&z.soundItems.length){h+=`<div class="sh">Sound</div><div class="sbox">Items to check: <strong>${z.soundItems.join(", ")}</strong></div>`;h+=ynZ(z,"soundOk","Sound working on ALL items?");h+=ynZ(z,"volumeOk","Volume level adequate?");h+=customFor(z,"Sound");}
   if(z.hasLight&&z.lightItems&&z.lightItems.length){h+=`<div class="sh">Lighting</div><div class="sbox">Items to check: <strong>${z.lightItems.join(", ")}</strong></div>`;h+=ynZ(z,"lightOk","Lighting working on ALL items?");h+=customFor(z,"Lighting");}
   if(z.hasOther&&z.otherItems&&z.otherItems.length){h+=`<div class="sh">Other</div><div class="sbox">Items to check: <strong>${z.otherItems.join(", ")}</strong></div>`;h+=ynZ(z,"otherOk","All other items checked and OK?");h+=customFor(z,"Other");}
@@ -600,6 +620,19 @@ function mkZBody(z){
 // was the safe one. Read each question yourself if a field is added later
 // — don't assume from the field name alone.
 const INVERTED_CHECKS=new Set(["cracks","ventBlocked","dirtyCorners","hotItems","dustInternal","deadPixels"]);
+// Every client defaults to the original quarterly Service Type set with an
+// optional Callout — unchanged behaviour for every client that doesn't set
+// serviceTypeMode. A client can opt into "monthly" (used for things like a
+// monthly safety check, distinct from the quarterly visit) to get the 12
+// months instead, with no Callout option at all. This is the single source
+// of truth for both the live form and Edit Report, so they can never drift
+// out of sync with each other.
+const MONTH_TYPES=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+const QUARTER_TYPES=["Q1: JAN-MAR","Q2: APR-JUN","Q3: JUL-SEP","Q4: OCT-DEC","CALLOUT"];
+function getServiceTypeOptions(clientObj){
+  if(clientObj&&clientObj.serviceTypeMode==="monthly")return{allTypes:MONTH_TYPES,hasCallout:false};
+  return{allTypes:QUARTER_TYPES,hasCallout:true};
+}
 // Renders any custom questions assigned to a specific section, so they
 // appear interleaved with the built-in ones in that same category instead
 // of always being lumped together at the very end.
@@ -2113,8 +2146,9 @@ function photoSrc(p){
 function editSubmission(){
   if(currentSubIdx===null)return;
   const s=SUBMISSIONS[currentSubIdx];
-  const tagMap={"Q1: JAN-MAR":"tq1","Q2: APR-JUN":"tq2","Q3: JUL-SEP":"tq3","Q4: OCT-DEC":"tq4","CALLOUT":"tco"};
-  const allTypes=["Q1: JAN-MAR","Q2: APR-JUN","Q3: JUL-SEP","Q4: OCT-DEC","CALLOUT"];
+  const editClient=CLIENTS[s.clientSlug]||(Object.values(CLIENTS).find(c=>c.name===s.clientName))||null;
+  const stConfig=getServiceTypeOptions(editClient);
+  const allTypes=stConfig.allTypes;
   const currentTypes=s.serviceTypes||[s.serviceType];
   let html='<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--blue);margin-bottom:10px">Technician</div>';
   html+=`<div class="fgrid"><div class="field"><label>Technician Name</label><input type="text" id="edit-techName" value="${esc(s.techName||'')}"></div><div class="field"><label>Mobile</label><input type="text" id="edit-techMobile" value="${esc(s.techMobile||'')}"></div></div>`;
@@ -2123,11 +2157,12 @@ function editSubmission(){
   html+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">';
   allTypes.forEach(t=>{html+=`<label style="display:flex;align-items:center;gap:5px;font-size:13px;font-weight:400;letter-spacing:0;text-transform:none;cursor:pointer"><input type="checkbox" id="edit-type-${t.replace(/[^a-z0-9]/gi,'_')}" ${currentTypes.includes(t)?'checked':''} style="width:16px;height:16px;accent-color:var(--blue)"> ${t}</label>`;});
   html+='</div>';
-  html+=`<div class="field"><label>Callout Reason <button id="ai-edit-clean-callout" onclick="aiCleanField('edit-calloutReason','ai-edit-clean-callout')" class="ai-btn" style="float:right">&#129668; Clean up</button></label><input type="text" id="edit-calloutReason" value="${esc(s.calloutReason||'')}"></div>`;
-  html+=`<div class="field"><label>Reported By</label><input type="text" id="edit-calloutReporter" value="${esc(s.calloutReporter||'')}"></div>`;
+  if(stConfig.hasCallout){
+    html+=`<div class="field"><label>Callout Reason <button id="ai-edit-clean-callout" onclick="aiCleanField('edit-calloutReason','ai-edit-clean-callout')" class="ai-btn" style="float:right">&#129668; Clean up</button></label><input type="text" id="edit-calloutReason" value="${esc(s.calloutReason||'')}"></div>`;
+    html+=`<div class="field"><label>Reported By</label><input type="text" id="edit-calloutReporter" value="${esc(s.calloutReporter||'')}"></div>`;
+  }
   html+=`<div class="field"><label>Overall Notes <button id="ai-edit-clean-overall" onclick="aiCleanField('edit-overallNotes','ai-edit-clean-overall')" class="ai-btn" style="float:right">&#129668; Clean up</button></label><textarea id="edit-overallNotes">${esc(s.overallNotes||'')}</textarea></div>`;
   // Build editable zoneData from a safe copy — never mutate s directly
-  const editClient=CLIENTS[s.clientSlug]||(Object.values(CLIENTS).find(c=>c.name===s.clientName))||null;
   if(editClient&&editClient.zones){editClient.zones.forEach((z,i)=>{if(!z.id)z.id="z"+(i+1);});}
   let editZoneData=s.zoneData&&typeof s.zoneData==="object"&&!Array.isArray(s.zoneData)&&Object.keys(s.zoneData).length?JSON.parse(JSON.stringify(s.zoneData)):{};
   if(!Object.keys(editZoneData).length&&editClient&&editClient.zones){
@@ -2213,11 +2248,14 @@ function saveSubEdit(){
   s.techMobile=document.getElementById("edit-techMobile").value;
   s.serviceDate=document.getElementById("edit-serviceDate").value;
   s.followup=document.getElementById("edit-followup").value;
-  s.calloutReason=document.getElementById("edit-calloutReason").value;
-  s.calloutReporter=document.getElementById("edit-calloutReporter").value;
+  const calloutReasonEl=document.getElementById("edit-calloutReason");
+  const calloutReporterEl=document.getElementById("edit-calloutReporter");
+  if(calloutReasonEl)s.calloutReason=calloutReasonEl.value;
+  if(calloutReporterEl)s.calloutReporter=calloutReporterEl.value;
   s.overallNotes=document.getElementById("edit-overallNotes").value;
-  // Service types
-  const allTypes=["Q1: JAN-MAR","Q2: APR-JUN","Q3: JUL-SEP","Q4: OCT-DEC","CALLOUT"];
+  // Service types — must match whichever set was actually rendered above
+  const saveEditClient=CLIENTS[s.clientSlug]||(Object.values(CLIENTS).find(c=>c.name===s.clientName))||null;
+  const allTypes=getServiceTypeOptions(saveEditClient).allTypes;
   s.serviceTypes=allTypes.filter(t=>document.getElementById("edit-type-"+t.replace(/[^a-z0-9]/gi,"_"))?.checked);
   s.serviceType=s.serviceTypes.join(" + ");
   if(s.zoneData){Object.keys(s.zoneData).forEach(zid=>{
