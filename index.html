@@ -1178,7 +1178,7 @@ async function submitReport(){
   btn.innerHTML='<span class="spin"></span>Submitting...';
   // Build sub AFTER upload wait so driveUrls are captured
   const sub={id:"sub_"+Date.now(),timestamp:new Date().toISOString(),clientSlug:S.slug,clientName:S.client.name,clientAddress:S.client.address,techName:S.techName,techMobile:S.techMobile,serviceDate:S.serviceDate,serviceType:S.serviceType,serviceTypes:S.serviceTypes,calloutReason:S.calloutReason,calloutReporter:S.calloutReporter,overallNotes:document.getElementById("overall-notes").value,followup:S.followup,zoneData:JSON.parse(JSON.stringify(S.zoneData)),photos:JSON.parse(JSON.stringify(S.photos)),afterPhotos:JSON.parse(JSON.stringify(S.afterPhotos||{})),photoCount:Object.values(S.photos).flat().length+Object.values(S.afterPhotos||{}).flat().length,driveFolderUrl:S.driveFolderUrl||""};
-  try{localStorage.setItem("tkm9_last_tech",JSON.stringify({name:S.techName||"",mobile:S.techMobile||""}));}catch(e){}
+  try{localStorage.setItem("tkm9_last_tech_"+S.slug,JSON.stringify({name:S.techName||"",mobile:S.techMobile||""}));}catch(e){}
   SUBMISSIONS.unshift(sub);
   // Stash full-res photos AND zoneData in memory so PDF can use them this session
   SESSION_PHOTOS[sub.id]={photos:sub.photos,afterPhotos:sub.afterPhotos,zoneData:sub.zoneData};
@@ -2714,9 +2714,12 @@ const win=window.open("","_blank");
 }
 
 function exitAdmin(){window.location.href=window.location.pathname+"?admin";}
-// Fills Technician Name/Mobile from whoever last submitted a report on
-// this device, if anything's been saved. Used on first opening the form
-// and again after hardReset() clears the fields for the next report.
+// Fills Technician Name/Mobile from whoever last submitted a report for
+// THIS specific client on this device — scoped per client, not globally,
+// since different clients normally have their own regular technician and
+// pulling in "whoever last used this device" could show the wrong name
+// on a site someone else usually services. Used on first opening the
+// form and again after hardReset() clears the fields for the next report.
 // Name and mobile are searched for independently, most-recent-first, so
 // a corrupted value on the latest entry (e.g. a Google Sheets formula
 // error like "#ERROR!" stored where a mobile number should be) doesn't
@@ -2725,12 +2728,12 @@ function fillLastTechDetails(){
   try{
     const candidates=[];
     try{
-      const saved=JSON.parse(localStorage.getItem("tkm9_last_tech")||"null");
+      const saved=JSON.parse(localStorage.getItem("tkm9_last_tech_"+S.slug)||"null");
       if(saved)candidates.push({name:saved.name||"",mobile:saved.mobile||"",timestamp:new Date().toISOString()});
     }catch(e){}
     try{
       const local=JSON.parse(localStorage.getItem("tkm9_submissions")||"[]");
-      local.forEach(s=>{if(s)candidates.push({name:s.techName||"",mobile:s.techMobile||"",timestamp:s.timestamp||""});});
+      local.filter(s=>s&&s.clientSlug===S.slug).forEach(s=>{candidates.push({name:s.techName||"",mobile:s.techMobile||"",timestamp:s.timestamp||""});});
     }catch(e){}
     candidates.sort((a,b)=>new Date(b.timestamp)-new Date(a.timestamp));
     const isValidMobile=m=>m&&!m.trim().startsWith("#");
