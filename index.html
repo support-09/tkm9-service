@@ -578,6 +578,16 @@ function mkZBody(z){
   if(z.hasSound&&z.soundItems&&z.soundItems.length){h+=`<div class="sh">Sound</div><div class="sbox">Items to check: <strong>${z.soundItems.join(", ")}</strong></div>`;h+=ynZ(z,"soundOk","Sound working on ALL items?");h+=ynZ(z,"volumeOk","Volume level adequate?");h+=customFor(z,"Sound");}
   if(z.hasLight&&z.lightItems&&z.lightItems.length){h+=`<div class="sh">Lighting</div><div class="sbox">Items to check: <strong>${z.lightItems.join(", ")}</strong></div>`;h+=ynZ(z,"lightOk","Lighting working on ALL items?");h+=customFor(z,"Lighting");}
   if(z.hasOther&&z.otherItems&&z.otherItems.length){h+=`<div class="sh">Other</div><div class="sbox">Items to check: <strong>${z.otherItems.join(", ")}</strong></div>`;h+=ynZ(z,"otherOk","All other items checked and OK?");h+=customFor(z,"Other");}
+  if(z.customChecks&&z.customChecks.length){
+    // Any custom section beyond the fixed built-in ones above (e.g. a
+    // product name like "Fence: Spinner") gets its own header here, in
+    // the order it first appears — this is what lets a single zone hold
+    // several distinct products with clearly grouped questions for each,
+    // instead of every custom question dumping into one flat list.
+    const FIXED_SECTIONS=["Projection","LED Screen","Animal Tray","Server Room","Screen Checks","External — Safety & Quality","Internal — Technical","Sound","Lighting","Other"];
+    const extraSections=[...new Set(z.customChecks.filter(c=>c.section&&!FIXED_SECTIONS.includes(c.section)&&c.text&&c.text.trim()).map(c=>c.section))];
+    extraSections.forEach(section=>{h+=`<div class="sh">${esc(section)}</div>`;h+=customFor(z,section);});
+  }
   if(z.customChecks&&z.customChecks.some(c=>!c.section&&c.text&&c.text.trim())){h+='<div class="sh">Other Questions</div>';h+=z.customChecks.filter(c=>!c.section&&c.text&&c.text.trim()).map(c=>yn(z.id,c.key,c.text,(z.checkPolarity&&z.checkPolarity[c.key])?z.checkPolarity[c.key]==="noGood":false)).join("");}
   h+=`<div class="sh">Zone Summary</div><div class="field"><label>Summary / Items to Flag${S.assisted?` <button id="ai-sum-btn-${z.id}" onclick="aiZoneSummary('${z.id}')" class="ai-btn" style="float:right">&#129668; Generate summary</button>`:"" }</label><textarea id="zn-${z.id}" style="min-height:150px" oninput="sf('${z.id}','zoneNote',this.value);autoGrow(this)"></textarea></div>`;h+='<div class="sh">Photos &amp; Video — After Service</div>';h+=`<div class="pa-btns"><div class="pa-btn"><input type="file" id="pia-cam-${z.id}" accept="image/*" capture="environment"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-0.125em"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg> Take Photo</div><div class="pa-btn"><input type="file" id="pia-vid-${z.id}" accept="video/*" capture="environment"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-0.125em"><path d="m22 8-6 4 6 4V8Z"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg> Record Video</div><div class="pa-btn"><input type="file" id="pia-lib-${z.id}" accept="image/*,video/*" multiple><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-0.125em"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg> From Library</div></div>`;h+=`<div class="pg" id="pga-${z.id}"></div>`;
   h+=`<button class="mdb${z.completed?" done":""}" id="mdb-${z.id}" onclick="markDone('${z.id}')">${z.completed?"Zone Complete":"Mark Zone Complete"} <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-0.125em"><path d="M20 6 9 17l-5-5"/></svg></button>`;
@@ -1988,7 +1998,7 @@ function viewSubmission(i){
     Object.entries(s.photos).forEach(([zid,photos])=>{
       const arr=Array.isArray(photos)?photos:[];
       if(arr.length){
-        html+=`<hr style="border-color:var(--bor);margin:10px 0"><div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--blue);margin-bottom:8px">Zone ${zid.replace("z","")} Photos</div><div style="display:flex;flex-wrap:wrap;gap:6px">`;
+        html+=`<hr style="border-color:var(--bor);margin:10px 0"><div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--blue);margin-bottom:8px">Zone ${zid.replace("z","")} — Service Photos & Video</div><div style="display:flex;flex-wrap:wrap;gap:6px">`;
         arr.forEach(p=>{
           const src=photoSrc(p);
           const isVid=typeof p==="object"&&p.type&&p.type.startsWith("video");
@@ -2006,7 +2016,7 @@ function viewSubmission(i){
     Object.entries(s.afterPhotos).forEach(([zid,photos])=>{
       const arr=Array.isArray(photos)?photos:[];
       if(arr.length){
-        html+=`<hr style="border-color:var(--bor);margin:10px 0"><div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--grn);margin-bottom:8px">Zone ${zid.replace("z","")} — After Service Photos</div><div style="display:flex;flex-wrap:wrap;gap:6px">`;
+        html+=`<hr style="border-color:var(--bor);margin:10px 0"><div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--grn);margin-bottom:8px">Zone ${zid.replace("z","")} — Service Photos & Video (cont.)</div><div style="display:flex;flex-wrap:wrap;gap:6px">`;
         arr.forEach(p=>{
           const src=photoSrc(p);
           const driveUrl=typeof p==="object"&&p.driveUrl?p.driveUrl:"";
@@ -2161,7 +2171,7 @@ function editSubmission(){
       html+=`<div class="field"><label>Zone Summary <button id="ai-edit-sum-btn-${zid}" onclick="aiZoneSummaryEdit('${zid}','${esc(zoneName)}')" class="ai-btn" style="float:right">&#129668; Generate summary</button></label><textarea id="edit-zoneNote-${zid}">${esc(z.zoneNote||'')}</textarea></div>`;
       // ── BEFORE SERVICE PHOTOS ──
       s.photos=s.photos||{};s.photos[zid]=s.photos[zid]||[];
-      html+=`<div style="font-size:11px;font-weight:700;color:var(--mut);margin-bottom:6px;text-transform:uppercase;letter-spacing:.07em"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-0.125em"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg> Before Service Photos & Video</div>`;
+      html+=`<div style="font-size:11px;font-weight:700;color:var(--mut);margin-bottom:6px;text-transform:uppercase;letter-spacing:.07em"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-0.125em"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg> Service Photos & Video</div>`;
       html+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">';
       (s.photos[zid]||[]).forEach((p,pi)=>{
         const src=photoSrc(p);const isVid=typeof p==="object"&&p.type&&p.type.startsWith("video");const driveUrl=typeof p==="object"&&p.driveUrl?p.driveUrl:"";const driveId=typeof p==="object"&&p.driveId?p.driveId:"";
@@ -2173,10 +2183,10 @@ function editSubmission(){
         else{html+=`<div style="position:relative"><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:80px;height:60px;background:#f5f5fa;border:1px dashed #ccc;border-radius:6px;color:#999;font-size:10px;font-weight:600;text-align:center;line-height:1.3"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-0.125em"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg><br>Unavailable</div><button onclick="editDeletePhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-0.125em"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button></div>`;}
       });
       html+='</div>';
-      html+=`<div class="pa-btn" style="width:fit-content;margin-bottom:16px;padding:8px 14px;font-size:12px"><input type="file" accept="image/*,video/*" multiple onchange="editAddPhotos(event,'${zid}','before')"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-0.125em"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg> Add Before Photos &amp; Video</div>`;
+      html+=`<div class="pa-btn" style="width:fit-content;margin-bottom:16px;padding:8px 14px;font-size:12px"><input type="file" accept="image/*,video/*" multiple onchange="editAddPhotos(event,'${zid}','before')"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-0.125em"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg> Add Service Photos &amp; Video</div>`;
       // ── AFTER SERVICE PHOTOS ──
       s.afterPhotos=s.afterPhotos||{};s.afterPhotos[zid]=s.afterPhotos[zid]||[];
-      html+=`<div style="font-size:11px;font-weight:700;color:var(--grn);margin-bottom:6px;text-transform:uppercase;letter-spacing:.07em"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-0.125em"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg> After Service Photos & Video</div>`;
+      html+=`<div style="font-size:11px;font-weight:700;color:var(--grn);margin-bottom:6px;text-transform:uppercase;letter-spacing:.07em"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-0.125em"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg> Service Photos & Video</div>`;
       html+='<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">';
       (s.afterPhotos[zid]||[]).forEach((p,pi)=>{
         const src=photoSrc(p);const isVid=typeof p==="object"&&p.type&&p.type.startsWith("video");const driveUrl=typeof p==="object"&&p.driveUrl?p.driveUrl:"";const driveId=typeof p==="object"&&p.driveId?p.driveId:"";
@@ -2188,7 +2198,7 @@ function editSubmission(){
         else{html+=`<div style="position:relative"><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:80px;height:60px;background:#f5f5fa;border:1px dashed #ccc;border-radius:6px;color:#999;font-size:10px;font-weight:600;text-align:center;line-height:1.3"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-0.125em"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg><br>Unavailable</div><button onclick="editDeleteAfterPhoto('${zid}',${pi})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;border-radius:50%;width:18px;height:18px;color:#fff;font-size:11px;cursor:pointer"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-0.125em"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button></div>`;}
       });
       html+='</div>';
-      html+=`<div class="pa-btn" style="width:fit-content;margin-bottom:8px;padding:8px 14px;font-size:12px;border-color:var(--grn);color:var(--grn)"><input type="file" accept="image/*,video/*" multiple onchange="editAddPhotos(event,'${zid}','after')"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-0.125em"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg> Add After Photos &amp; Video</div>`;
+      html+=`<div class="pa-btn" style="width:fit-content;margin-bottom:8px;padding:8px 14px;font-size:12px;border-color:var(--grn);color:var(--grn)"><input type="file" accept="image/*,video/*" multiple onchange="editAddPhotos(event,'${zid}','after')"><svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-0.125em"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"/><circle cx="12" cy="13" r="4"/></svg> Add Service Photos &amp; Video</div>`;
       html+='</div>';
     });
   }
@@ -2500,9 +2510,9 @@ function downloadSubPDF(idx){
         return h+"</div>";
       }
       let photoSection="";
-      if(s.photos&&s.photos[zid]){const arr=Array.isArray(s.photos[zid])?s.photos[zid]:[];if(arr.length)photoSection=photoGrid(arr,"Before Service Photos & Video");}
+      if(s.photos&&s.photos[zid]){const arr=Array.isArray(s.photos[zid])?s.photos[zid]:[];if(arr.length)photoSection=photoGrid(arr,"Service Photos & Video");}
       let afterPhotoSection="";
-      if(s.afterPhotos&&s.afterPhotos[zid]){const arr=Array.isArray(s.afterPhotos[zid])?s.afterPhotos[zid]:[];if(arr.length)afterPhotoSection=photoGrid(arr,"After Service Photos & Video");}
+      if(s.afterPhotos&&s.afterPhotos[zid]){const arr=Array.isArray(s.afterPhotos[zid])?s.afterPhotos[zid]:[];if(arr.length)afterPhotoSection=photoGrid(arr,arr.length&&photoSection?"Service Photos & Video (cont.)":"Service Photos & Video");}
 
       zonesHtml+=`
       <div style="margin-bottom:28px;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.07);border:1px solid #e0e0f0;page-break-inside:avoid">
