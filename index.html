@@ -2719,7 +2719,18 @@ function exitAdmin(){window.location.href=window.location.pathname+"?admin";}
 // and again after hardReset() clears the fields for the next report.
 function fillLastTechDetails(){
   try{
-    const lastTech=JSON.parse(localStorage.getItem("tkm9_last_tech")||"null");
+    let lastTech=JSON.parse(localStorage.getItem("tkm9_last_tech")||"null");
+    if(!lastTech){
+      // Nothing saved yet under the new key — this device may still have
+      // older reports from before this feature existed. Fall back to the
+      // most recent one of those rather than making someone who's already
+      // used this device type their details in again for no reason.
+      try{
+        const local=JSON.parse(localStorage.getItem("tkm9_submissions")||"[]");
+        const withTech=local.filter(s=>s&&s.techName).sort((a,b)=>new Date(b.timestamp)-new Date(a.timestamp));
+        if(withTech.length)lastTech={name:withTech[0].techName||"",mobile:withTech[0].techMobile||""};
+      }catch(e){}
+    }
     if(lastTech){
       if(lastTech.name)document.getElementById("tech-name").value=lastTech.name;
       if(lastTech.mobile)document.getElementById("tech-mobile").value=lastTech.mobile;
