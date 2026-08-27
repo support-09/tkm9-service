@@ -512,6 +512,12 @@ function initApp(){
   document.getElementById("banner-1").innerHTML=b;
   document.getElementById("banner-2").innerHTML=b;
   document.getElementById("service-date").value=new Date().toISOString().split("T")[0];
+  // Fill in Technician Name/Mobile from whoever last submitted a report on
+  // this device — this is per-device, not per-technician, so if two techs
+  // share a phone this will show the previous one's details until they
+  // overwrite it. That's fine here: it's just a convenience starting
+  // point, and they can always edit it before submitting.
+  fillLastTechDetails();
   // Build the Service Type buttons for whichever mode this client uses —
   // quarterly with an optional Callout (the default, unchanged for every
   // existing client), or a plain set of months with no Callout at all.
@@ -1172,6 +1178,7 @@ async function submitReport(){
   btn.innerHTML='<span class="spin"></span>Submitting...';
   // Build sub AFTER upload wait so driveUrls are captured
   const sub={id:"sub_"+Date.now(),timestamp:new Date().toISOString(),clientSlug:S.slug,clientName:S.client.name,clientAddress:S.client.address,techName:S.techName,techMobile:S.techMobile,serviceDate:S.serviceDate,serviceType:S.serviceType,serviceTypes:S.serviceTypes,calloutReason:S.calloutReason,calloutReporter:S.calloutReporter,overallNotes:document.getElementById("overall-notes").value,followup:S.followup,zoneData:JSON.parse(JSON.stringify(S.zoneData)),photos:JSON.parse(JSON.stringify(S.photos)),afterPhotos:JSON.parse(JSON.stringify(S.afterPhotos||{})),photoCount:Object.values(S.photos).flat().length+Object.values(S.afterPhotos||{}).flat().length,driveFolderUrl:S.driveFolderUrl||""};
+  try{localStorage.setItem("tkm9_last_tech",JSON.stringify({name:S.techName||"",mobile:S.techMobile||""}));}catch(e){}
   SUBMISSIONS.unshift(sub);
   // Stash full-res photos AND zoneData in memory so PDF can use them this session
   SESSION_PHOTOS[sub.id]={photos:sub.photos,afterPhotos:sub.afterPhotos,zoneData:sub.zoneData};
@@ -1212,6 +1219,7 @@ function hardReset(){
   syncAssistedButtons();
   ["tech-name","tech-mobile","callout-reason","callout-reporter","overall-notes"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
   document.getElementById("service-date").value=new Date().toISOString().split("T")[0];
+  fillLastTechDetails();
   document.getElementById("callout-extra").classList.remove("show");
   document.querySelectorAll(".stb").forEach(b=>b.classList.remove("sel"));
   document.querySelectorAll(".yb[data-field]").forEach(b=>b.classList.remove("on"));
@@ -2706,6 +2714,18 @@ const win=window.open("","_blank");
 }
 
 function exitAdmin(){window.location.href=window.location.pathname+"?admin";}
+// Fills Technician Name/Mobile from whoever last submitted a report on
+// this device, if anything's been saved. Used on first opening the form
+// and again after hardReset() clears the fields for the next report.
+function fillLastTechDetails(){
+  try{
+    const lastTech=JSON.parse(localStorage.getItem("tkm9_last_tech")||"null");
+    if(lastTech){
+      if(lastTech.name)document.getElementById("tech-name").value=lastTech.name;
+      if(lastTech.mobile)document.getElementById("tech-mobile").value=lastTech.mobile;
+    }
+  }catch(e){}
+}
 function esc(s){return(s===null||s===undefined?"":String(s)).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
 function downloadFile(){
     // Download function - regenerates index.html with current client data
