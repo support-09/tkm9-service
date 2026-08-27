@@ -1501,7 +1501,13 @@ async function uploadAdminPhotoToDrive(file, label){
       try{
         const checkParams=new URLSearchParams({type:"getLastUpload",folderId:folderId,fileName:fileName});
         const chkData=await jsonpRequest(APPS_SCRIPT_URL+"?"+checkParams.toString());
-        if(chkData.status==="success")return chkData.thumbnailUrl||chkData.fileUrl;
+        // Served through the script's own photo proxy (type=photo&id=) rather
+        // than a direct Google CDN link — a Workspace external-sharing
+        // restriction can silently block anonymous embedding of a file even
+        // though it opens fine for someone logged in, so routing it through
+        // the script (which always has access to files it created) sidesteps
+        // that entirely.
+        if(chkData.status==="success")return chkData.fileId?(APPS_SCRIPT_URL+"?type=photo&id="+chkData.fileId):(chkData.thumbnailUrl||chkData.fileUrl);
       }catch(e){}
       wait=Math.min(wait*1.6,3500);
     }
@@ -1582,7 +1588,7 @@ async function retryLocalPhotoUpload(dataUri,label){
       try{
         const checkParams=new URLSearchParams({type:"getLastUpload",folderId:folderId,fileName:fileName});
         const chkData=await jsonpRequest(APPS_SCRIPT_URL+"?"+checkParams.toString());
-        if(chkData.status==="success")return chkData.thumbnailUrl||chkData.fileUrl;
+        if(chkData.status==="success")return chkData.fileId?(APPS_SCRIPT_URL+"?type=photo&id="+chkData.fileId):(chkData.thumbnailUrl||chkData.fileUrl);
       }catch(e){}
       wait=Math.min(wait*1.6,3500);
     }
@@ -2411,7 +2417,14 @@ function downloadSubPDF(idx){
       const refPhotos=(zoneData?.photos||[]).filter(p=>p&&typeof p==="string"&&p.startsWith("http"));
       if(refPhotos.length){
         refSection+=`<div style="margin-bottom:20px"><div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#6b6f8a;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #eee">Reference Photos</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px">`;
-        refPhotos.forEach(p=>{refSection+=`<img src="${p}" style="width:100%;height:140px;object-fit:contain;background:#f0f0f5;border-radius:8px;border:1px solid #eee">`;});
+        refPhotos.forEach(p=>{
+          // Same escaped fallback as the Service Photos grid below — every
+          // quote inside must stay escaped as &quot;, including the SVG's
+          // own attributes, or a single unescaped " here breaks out of
+          // this onerror attribute and leaks raw text onto the page.
+          const fallback=`this.outerHTML='<div style=&quot;display:flex;flex-direction:column;align-items:center;justify-content:center;height:140px;background:#f5f5fa;border:1px dashed #ccc;border-radius:8px;color:#999;font-size:11px;font-weight:600;text-align:center&quot;><svg width=&quot;1em&quot; height=&quot;1em&quot; viewBox=&quot;0 0 24 24&quot; fill=&quot;none&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;2&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; style=&quot;display:inline-block;vertical-align:-0.125em&quot;><path d=&quot;M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z&quot;/><path d=&quot;M12 9v4&quot;/><path d=&quot;M12 17h.01&quot;/></svg><br>Unavailable</div>'`;
+          refSection+=`<img src="${p}" style="width:100%;height:140px;object-fit:contain;background:#f0f0f5;border-radius:8px;border:1px solid #eee" onerror="${fallback}">`;
+        });
         refSection+=`</div></div>`;
       }
 
